@@ -56,7 +56,7 @@ class LuaVFS {
 		static int GetMaps(lua_State* L);
 		static int GetArchiveDependencies(lua_State* L);
 		static int GetArchiveInfo(lua_State* L);
-		//
+		// ---
 
 		// string packing utilities
 		static int PackU8(lua_State* L);
