@@ -84,7 +84,6 @@ progress.make
 *.log
 *~
 .*.swp
-*.a
 *.gch
 *.dir
 *.class

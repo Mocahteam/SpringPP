@@ -72,7 +72,6 @@ Makefile
 *.log
 *~
 .*.swp
-*.a
 *.gch
 *.dir
 *.class
