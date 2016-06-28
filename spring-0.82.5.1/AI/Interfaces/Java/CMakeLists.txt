@@ -25,10 +25,16 @@
 macro    (GetFirstSubDirName name_var dir)
 	file(GLOB dirContent RELATIVE "${dir}" FOLLOW_SYMLINKS "${dir}/*")
 	foreach    (dirPart ${dirContent})
-		if    (IS_DIRECTORY "${dir}/${dirPart}")
+		# s (Fix bug when ".svn" is first sub directory) ---
+		if    (IS_DIRECTORY "${dir}/${dirPart}" AND NOT "${dir}/${dirPart}" MATCHES "${dir}/.svn")
 			set(${name_var} ${dirPart})
 			break()
-		endif (IS_DIRECTORY "${dir}/${dirPart}")
+		endif (IS_DIRECTORY "${dir}/${dirPart}" AND NOT "${dir}/${dirPart}" MATCHES "${dir}/.svn")
+		#if    (IS_DIRECTORY "${dir}/${dirPart}")
+		#	set(${name_var} ${dirPart})
+		#	break()
+		#endif (IS_DIRECTORY "${dir}/${dirPart}")
+		# ---
 	endforeach (dirPart)
 endmacro (GetFirstSubDirName name_var dir)
 
@@ -234,14 +240,22 @@ macro    (ConfigureJavaSkirmishAI)
 		endif (configureMavenProject)
 
 		# Install the data files
-		install(DIRECTORY "${myDir}/data/"               DESTINATION ${myInstDataDir})
+		install(DIRECTORY "${myDir}/data/"               DESTINATION ${myInstDataDir}
+			# Muratet (Install: Exclude SVN) ---
+			PATTERN ".svn" EXCLUDE
+			# ---
+		)
 		# Install the library
 		install(FILES    "${myBuildDir}/${myBinJarFile}" DESTINATION ${myInstDataDir})
 		# Install the sources archive (optional)
 		install(FILES    "${myBuildDir}/${mySrcJarFile}" DESTINATION ${myInstDataDir}/jlib OPTIONAL)
 		if     (EXISTS "${myBuildDir}/jlib")
 			# Install libraries generated/downloaded during buildtime
-			install(DIRECTORY "${myBuildDir}/jlib/"      DESTINATION ${myInstDataDir}/jlib)
+			install(DIRECTORY "${myBuildDir}/jlib/"      DESTINATION ${myInstDataDir}/jlib
+				# Muratet (Install: Exclude SVN) ---
+				PATTERN ".svn" EXCLUDE
+				# ---
+			)
 		endif  (EXISTS "${myBuildDir}/jlib")
 	endif (BUILD_THIS_SKIRMISHAI)
 endmacro (ConfigureJavaSkirmishAI)
@@ -478,8 +492,16 @@ if    (BUILD_${myName}_AIINTERFACE)
 	# Install the native library
 	install(TARGETS   ${myTarget} DESTINATION ${myInstLibsDir})
 	# Install the data files
-	install(DIRECTORY "${myDir}/data/" DESTINATION ${myInstLibsDir} FILES_MATCHING PATTERN REGEX "InterfaceInfo\\.lua$")
-	install(DIRECTORY "${myDir}/data/" DESTINATION ${myInstDataDir} FILES_MATCHING PATTERN REGEX "InterfaceInfo\\.lua$" EXCLUDE PATTERN "*")
+	install(DIRECTORY "${myDir}/data/" DESTINATION ${myInstLibsDir} FILES_MATCHING PATTERN REGEX "InterfaceInfo\\.lua$"
+		# Muratet (Install: Exclude SVN) ---
+		PATTERN ".svn" EXCLUDE
+		# ---
+	)
+	install(DIRECTORY "${myDir}/data/" DESTINATION ${myInstDataDir} FILES_MATCHING PATTERN REGEX "InterfaceInfo\\.lua$" EXCLUDE PATTERN "*"
+		# Muratet (Install: Exclude SVN) ---
+		PATTERN ".svn" EXCLUDE
+		# ---
+	)
 	# Install the library
 	install(FILES     "${myBuildDir}/${myBinJarFile}"  DESTINATION ${myInstDataDir})
 	# Install the sources archive

@@ -28,6 +28,9 @@
 #include "Game/GameSetup.h"
 #include "Game/Player.h"
 #include "Game/SelectedUnits.h"
+// Muratet (add Prog&Play #include) ---
+#include "Game/ProgAndPlay.h"
+// ---
 #include "Game/UI/MiniMap.h"
 #include "Lua/LuaRules.h"
 #include "Map/Ground.h"
@@ -829,6 +832,9 @@ void CUnit::SlowUpdate()
 
 	CalculateTerrainType();
 	UpdateTerrainType();
+	// Muratet (call P&P UpdateUnit)
+	pp->UpdateUnit(this);
+	// ---
 }
 
 void CUnit::SlowUpdateWeapons() {
@@ -1311,6 +1317,10 @@ bool CUnit::ChangeTeam(int newteam, ChangeType type)
 	eventHandler.UnitGiven(this, oldteam);
 	eoh->UnitGiven(*this, oldteam);
 
+	// Muratet (Change unit coalition) ---
+	pp->RemoveUnit(this);
+	pp->AddUnit(this);
+	// ---
 	return true;
 }
 

@@ -38,7 +38,7 @@ public:
 	CMatrix44f shadowMatrix;
 	void CalcMinMaxView(void);
 
-	const float4 GetShadowParams() const { return float4(xmid, ymid, p17, p18); }
+	const float4& GetShadowParams() const { return shadowParams; }
 
 	enum ShadowGenProgram {
 		SHADOWGEN_PROGRAM_MODEL      = 0,
@@ -76,6 +76,7 @@ protected:
 	//! to write the (FBO) depth-buffer texture
 	std::vector<Shader::IProgramObject*> shadowGenProgs;
 
+	float4 shadowParams;
 	float x1, x2, y1, y2;
 	float xmid, ymid;
 	float p17, p18;

@@ -10,6 +10,9 @@
 #include "UnitLoader.h"
 #include "CommandAI/BuilderCAI.h"
 #include "Game/GameSetup.h"
+// Muratet (add Prog&Play #include) ---
+#include "Game/ProgAndPlay.h"
+// ---
 #include "Game/SelectedUnits.h"
 #include "Lua/LuaUnsyncedCtrl.h"
 #include "Map/Ground.h"
@@ -149,7 +152,9 @@ int CUnitHandler::AddUnit(CUnit *unit)
 	unitsByDefs[unit->team][unit->unitDef->id].insert(unit);
 
 	maxUnitRadius = max(unit->radius, maxUnitRadius);
-
+	// Muratet (call P&P addUnit) ---
+	pp->AddUnit(unit);
+	// ---
 	return unit->id;
 }
 
@@ -181,6 +186,10 @@ void CUnitHandler::DeleteUnitNow(CUnit* delUnit)
 			}
 			delTeam = delUnit->team;
 			delType = delUnit->unitDef->id;
+
+			// Muratet (call P&P removeUnit) ---
+			pp->RemoveUnit(delUnit);
+			// ---
 
 			activeUnits.erase(usi);
 			units[delUnit->id] = 0;
@@ -253,7 +262,10 @@ void CUnitHandler::Update()
 
 	{
 		SCOPED_TIMER("Unit slow update");
-		if (!(gs->frameNum & (UNIT_SLOWUPDATE_RATE-1))) {
+		// Muratet (Call a SlowUpdate on second frame) ---
+		//if (!(gs->frameNum & (UNIT_SLOWUPDATE_RATE-1))) {
+		if (!(gs->frameNum & (UNIT_SLOWUPDATE_RATE-1)) || gs->frameNum == 2) {
+		// ---
 			slowUpdateIterator = activeUnits.begin();
 		}
 

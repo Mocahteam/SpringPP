@@ -474,3 +474,30 @@
 //  |             0x07C
 //  }             0x07D
 //  ~             0x07E
+
+// Muratet (Bind key in order to use groups)---
+bind 0x26 specteam 1
+bind Any+0x26 group1
+bind 0xe9 specteam 2
+bind Any+0xe9 group2
+bind 0x22 specteam 3
+bind Any+0x22 group3
+bind 0x27 specteam 4
+bind Any+0x27 group4
+bind 0x28 specteam 5
+bind Any+0x28 group5
+bind 0x2d specteam 6
+bind Any+0x2d group6
+bind 0xe8 specteam 7
+bind Any+0xe8 group7
+bind 0x5f specteam 8
+bind Any+0x5f group8
+bind 0xe7 specteam 9
+bind Any+0xe7 group9
+bind 0xe0 specteam 0
+bind Any+0xe0 group0
+
+unbind 0x2d slowdown
+unbind Any+0x2d slowdown
+
+// ---

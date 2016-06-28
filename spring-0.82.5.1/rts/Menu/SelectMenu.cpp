@@ -45,6 +45,10 @@
 #include "aGui/Picture.h"
 #include "aGui/List.h"
 
+// Muratet (Include sstream) ---
+#include <sstream>
+// ---
+
 using std::string;
 using agui::Button;
 using agui::HorizontalLayout;
@@ -61,29 +65,67 @@ public:
 		SetPos(0.5, 0.5);
 		SetSize(0.4, 0.2);
 		
+		// Muratet (Enable direct connect option) ---
+// 		agui::VerticalLayout* wndLayout = new agui::VerticalLayout(this);
+// 		HorizontalLayout* input = new HorizontalLayout(wndLayout);
+// 		/*agui::TextElement* label = */new agui::TextElement("Address:", input); // will be deleted in input
+// 		address = new agui::LineEdit(input);
+// 		address->DefaultAction.connect(boost::bind(&ConnectWindow::Finish, this, true));
+// 		address->SetFocus(true);
+// 		address->SetContent(configHandler->GetString("address", ""));
+// 		HorizontalLayout* buttons = new HorizontalLayout(wndLayout);
+// 		Button* connect = new Button("Connect", buttons);
+// 		connect->Clicked.connect(boost::bind(&ConnectWindow::Finish, this, true));
+// 		Button* close = new Button("Close", buttons);
+// 		close->Clicked.connect(boost::bind(&ConnectWindow::Finish, this, false));
+// 		GeometryChange();
 		agui::VerticalLayout* wndLayout = new agui::VerticalLayout(this);
-		HorizontalLayout* input = new HorizontalLayout(wndLayout);
-		/*agui::TextElement* label = */new agui::TextElement("Address:", input); // will be deleted in input
-		address = new agui::LineEdit(input);
+		
+		HorizontalLayout* input_adr = new HorizontalLayout(wndLayout);
+		new agui::TextElement("Address:", input_adr);
+		address = new agui::LineEdit(input_adr);
 		address->DefaultAction.connect(boost::bind(&ConnectWindow::Finish, this, true));
-		address->SetFocus(true);
 		address->SetContent(configHandler->GetString("address", ""));
+		
+		HorizontalLayout* input_port = new HorizontalLayout(wndLayout);
+		new agui::TextElement("Port:", input_port);
+		port = new agui::LineEdit(input_port);
+		port->DefaultAction.connect(boost::bind(&ConnectWindow::Finish, this, true));
+		port->SetContent(configHandler->GetString("port", ""));
+		
+		HorizontalLayout* input_name = new HorizontalLayout(wndLayout);
+		new agui::TextElement("Player Name:", input_name);
+		name = new agui::LineEdit(input_name);
+		name->DefaultAction.connect(boost::bind(&ConnectWindow::Finish, this, true));
+		name->SetFocus(true);
+		name->SetContent(configHandler->GetString("name", ""));
+		
 		HorizontalLayout* buttons = new HorizontalLayout(wndLayout);
 		Button* connect = new Button("Connect", buttons);
 		connect->Clicked.connect(boost::bind(&ConnectWindow::Finish, this, true));
 		Button* close = new Button("Close", buttons);
 		close->Clicked.connect(boost::bind(&ConnectWindow::Finish, this, false));
 		GeometryChange();
+		// ---
 	}
-
-	boost::signal<void (std::string)> Connect;
+	
+	// Muratet (Enable direct connect option) ---
+	//boost::signal<void (std::string)> Connect;
+	boost::signal<void (std::string, std::string, std::string)> Connect;
+	agui::LineEdit* port;
+	agui::LineEdit* name;
+	// ---
 	agui::LineEdit* address;
 	
 private:
 	void Finish(bool connect)
 	{
-		if (connect)
-			Connect(address->GetContent());
+		if (connect){
+			// Muratet (Enable direct connect option) ---
+			// Connect(address->GetContent());
+			Connect(address->GetContent(), port->GetContent(), name->GetContent());
+			// ---
+		}
 		else
 			WantClose();
 	};
@@ -329,7 +371,10 @@ void SelectMenu::ShowConnectWindow(bool show)
 	if (show && !conWindow)
 	{
 		conWindow = new ConnectWindow();
-		conWindow->Connect.connect(boost::bind(&SelectMenu::DirectConnect, this, _1));
+		// Muratet (Enable direct connect option) ---
+		// conWindow->Connect.connect(boost::bind(&SelectMenu::DirectConnect, this, _1));
+		conWindow->Connect.connect(boost::bind(&SelectMenu::DirectConnect, this, _1, _2, _3));
+		// ---
 		conWindow->WantClose.connect(boost::bind(&SelectMenu::ShowConnectWindow, this, false));
 	}
 	else if (!show && conWindow)
@@ -413,14 +458,29 @@ void SelectMenu::CleanWindow() {
 	}
 }
 
-void SelectMenu::DirectConnect(const std::string& addr)
+// Muratet (Enable direct connect option) ---
+// void SelectMenu::DirectConnect(const std::string& addr)
+// {
+// 	configHandler->SetString("address", addr);
+// 	mySettings->hostip = addr;
+// 	mySettings->isHost = false;
+// 	pregame = new CPreGame(mySettings);
+// 	agui::gui->RmElement(this);
+// }
+void SelectMenu::DirectConnect(const std::string& addr, const std::string& port, const std::string& name)
 {
 	configHandler->SetString("address", addr);
+	configHandler->SetString("port", port);
+	configHandler->SetString("name", name);
 	mySettings->hostip = addr;
+	std::istringstream iss(port);
+	iss >> mySettings->hostport;
+	mySettings->myPlayerName = name;
 	mySettings->isHost = false;
 	pregame = new CPreGame(mySettings);
 	agui::gui->RmElement(this);
 }
+// ---
 
 bool SelectMenu::HandleEventSelf(const SDL_Event& ev)
 {

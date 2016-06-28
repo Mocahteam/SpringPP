@@ -37,7 +37,10 @@ private:
 	void Quit();
 	void ShowConnectWindow(bool show);
 	void ShowUpdateWindow(bool show);
-	void DirectConnect(const std::string& addr);
+	// Muratet ---
+	//void DirectConnect(const std::string& addr);
+	void DirectConnect(const std::string& addr, const std::string& port, const std::string& name);
+	// Muratet ---
 
 	bool HandleEventSelf(const SDL_Event& ev);
 

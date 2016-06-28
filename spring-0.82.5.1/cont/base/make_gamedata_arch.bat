@@ -62,8 +62,10 @@ exit /B 1
 
 rem Found 7za.exe
 :ok7z
-set CMD_7Z=%EXEC_7Z% u -tzip -r
-
+rem Muratet (Exclude SVN) ---
+rem set CMD_7Z=%EXEC_7Z% u -tzip -r
+set CMD_7Z=%EXEC_7Z% u -tzip -r -y -xr!.svn
+rem ---
 
 rem Only copy to a temp for converting line endings if
 rem the git config value core.autocrlf is set to false,

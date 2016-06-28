@@ -25,11 +25,18 @@ install (DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/ DESTINATION ${DATADIR}
 		PATTERN "freedesktop" EXCLUDE
 		PATTERN "CMakeLists.txt" EXCLUDE
 		PATTERN "CMakeCache" EXCLUDE
+		# Muratet (Install: Exclude SVN) ---
+		PATTERN ".svn" EXCLUDE
+		# ---
 	)
 
 
 ### Install content
-install (DIRECTORY ${CMAKE_BINARY_DIR}/base DESTINATION ${DATADIR})
+install (DIRECTORY ${CMAKE_BINARY_DIR}/base DESTINATION ${DATADIR}
+	# Muratet (Install: Exclude SVN) ---
+	PATTERN ".svn" EXCLUDE
+	# ---
+)
 
 
 ### Install freedesktop-files, mime-types etc.

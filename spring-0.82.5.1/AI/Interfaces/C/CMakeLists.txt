@@ -53,8 +53,18 @@ macro    (ConfigureNativeSkirmishAI mySourceDirRel_var additionalSources_var add
 		set_target_properties(${myTarget} PROPERTIES OUTPUT_NAME   "SkirmishAI")
 
 		# Install the data files
-		install(DIRECTORY "${myDir}/data/" DESTINATION "${myInstLibsDir}" FILES_MATCHING PATTERN REGEX "AI(Info|Options)\\.lua$")
-		install(DIRECTORY "${myDir}/data/" DESTINATION "${myInstDataDir}" FILES_MATCHING PATTERN REGEX "AI(Info|Options)\\.lua$" EXCLUDE PATTERN "*")
+		install(DIRECTORY "${myDir}/data/" DESTINATION "${myInstLibsDir}"
+			FILES_MATCHING PATTERN REGEX "AI(Info|Options)\\.lua$"
+			# Muratet (Install: Exclude SVN) ---
+			PATTERN ".svn" EXCLUDE
+			# ---
+		)
+		install(DIRECTORY "${myDir}/data/" DESTINATION "${myInstDataDir}"
+			FILES_MATCHING PATTERN REGEX "AI(Info|Options)\\.lua$" EXCLUDE PATTERN "*"
+			# Muratet (Install: Exclude SVN) ---
+			PATTERN ".svn" EXCLUDE
+			# ---
+		)
 		# Install the library
 		install(TARGETS   ${myTarget}      DESTINATION "${myInstLibsDir}")
 	endif (BUILD_THIS_SKIRMISHAI)
@@ -110,8 +120,16 @@ if    (BUILD_${myName}_AIINTERFACE)
 	set_target_properties(${myTarget} PROPERTIES OUTPUT_NAME "AIInterface")
 
 	# Install the data files
-	install(DIRECTORY "${myDir}/data/" DESTINATION "${myInstLibsDir}" FILES_MATCHING PATTERN REGEX "InterfaceInfo\\.lua$")
-	install(DIRECTORY "${myDir}/data/" DESTINATION "${myInstDataDir}" FILES_MATCHING PATTERN REGEX "InterfaceInfo\\.lua$" EXCLUDE PATTERN "*")
+	install(DIRECTORY "${myDir}/data/" DESTINATION "${myInstLibsDir}" FILES_MATCHING PATTERN REGEX "InterfaceInfo\\.lua$"
+		# Muratet (Install: Exclude SVN) ---
+		PATTERN ".svn" EXCLUDE
+		# ---
+	)
+	install(DIRECTORY "${myDir}/data/" DESTINATION "${myInstDataDir}" FILES_MATCHING PATTERN REGEX "InterfaceInfo\\.lua$" EXCLUDE PATTERN "*"
+		# Muratet (Install: Exclude SVN) ---
+		PATTERN ".svn" EXCLUDE
+		# ---
+	)
 	# Install the library
 	install(TARGETS   ${myTarget}      DESTINATION "${myInstLibsDir}")
 endif (BUILD_${myName}_AIINTERFACE)

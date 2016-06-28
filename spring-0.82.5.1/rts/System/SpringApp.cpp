@@ -1175,7 +1175,7 @@ int SpringApp::Run(int argc, char *argv[])
 				input.PushEvent(event);
 			}
 		}
-
+		
 		if (globalQuit)
 			break;
 

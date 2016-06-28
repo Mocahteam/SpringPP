@@ -318,6 +318,11 @@ void CShadowHandler::CreateShadows(void)
 	xmid = 1.0f - (sqrt(fabs(x2)) / (sqrt(fabs(x2)) + sqrt(fabs(x1))));
 	ymid = 1.0f - (sqrt(fabs(y2)) / (sqrt(fabs(y2)) + sqrt(fabs(y1))));
 
+	shadowParams.x = xmid;
+	shadowParams.y = ymid;
+	shadowParams.z = p17;
+	shadowParams.w = p18;
+
 	shadowMatrix[ 0] =   cross1.x / maxLengthX;
 	shadowMatrix[ 4] =   cross1.y / maxLengthX;
 	shadowMatrix[ 8] =   cross1.z / maxLengthX;

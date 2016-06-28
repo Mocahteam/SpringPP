@@ -53,11 +53,6 @@ Makefile
 /AI/Skirmish/NTai/AI/AI.ncb
 /AI/Skirmish/NTai/AI/AI.suo
 
-# Windows libraries used by spring when compiling with MinGW
-# recommended: place the dir somewhere else, and specify with
-# MINGWLIBS=<your-path-here>/mingwlibs
-/mingwlibs
-
 # Windows libraries used by spring when compiling with Visual Studio
 /vclibs
 

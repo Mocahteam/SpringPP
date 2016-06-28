@@ -28,7 +28,10 @@ if ! which ${EXEC_7Z} > /dev/null; then
 	echo "Error: Could not find 7z." >&2
 	exit 1
 fi
-CMD_7Z="${EXEC_7Z} u -tzip -r"
+# Muratet (Exclude SVN) ---
+#CMD_7Z="${EXEC_7Z} u -tzip -r"
+CMD_7Z="${EXEC_7Z} u -tzip -r -y -xr!.svn"
+# ---
 
 # Move to spring source root
 cd $(dirname $0); cd ../..

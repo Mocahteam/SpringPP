@@ -9,6 +9,12 @@ ADD_SUBDIRECTORY(streflop)
 ADD_SUBDIRECTORY(md5)
 ADD_SUBDIRECTORY(lobby)
 ADD_SUBDIRECTORY(headlessStubs)
+# Muratet (Add P&P subdirectory) ---
+ADD_SUBDIRECTORY(pp)
+# ---
+# Meresse (Add traces subdirectory in pp) ---
+ADD_SUBDIRECTORY(pp/traces)
+# ---
 
 if    (NOT HEADLESS_SYSTEM)
 	Add_Subdirectory(gml)

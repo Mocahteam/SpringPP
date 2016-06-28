@@ -76,6 +76,10 @@
 #include <boost/cstdint.hpp>
 #include <Platform/Misc.h>
 
+// Muratet (in order to access globalQuit) ---
+#include "SpringApp.h"
+// ---
+
 using namespace std;
 
 // MinGW defines this for a WINAPI function
@@ -1628,7 +1632,16 @@ int LuaUnsyncedCtrl::Restart(lua_State* L)
 	//! else OpenAL soft crashs when using execlp
 	ISound::Shutdown();
 #endif
-
+	
+	// Muratet (fork process and launch execlp only in the child process) ---
+#ifndef _WIN32
+	if (fork() != 0)
+		globalQuit = true; // close cleanly the game in the parent process
+	else{
+		// launch execlp only in the child process
+#endif
+	// ---
+	
 	if (!script.empty())
 	{
 		const std::string scriptFullName = FileSystemHandler::GetInstance().GetWriteDir()+"script.txt";
@@ -1636,11 +1649,25 @@ int LuaUnsyncedCtrl::Restart(lua_State* L)
 		std::ofstream scriptfile(scriptFullName.c_str());
 		scriptfile << script;
 		scriptfile.close();
+		
 		//FIXME: ugly
+		// Muratet (Pass quote depending on system) ---
+#ifndef _WIN32
+		if (arguments.empty())
+			EXECLP(springFullName.c_str(), Quote(springFullName).c_str(), scriptFullName.c_str(), NULL);
+		else
+			EXECLP(springFullName.c_str(), Quote(springFullName).c_str(), arguments.c_str(), scriptFullName.c_str(), NULL);
+#else
 		if (arguments.empty())
 			EXECLP(springFullName.c_str(), Quote(springFullName).c_str(), Quote(scriptFullName).c_str(), NULL);
 		else
 			EXECLP(springFullName.c_str(), Quote(springFullName).c_str(), arguments.c_str(), Quote(scriptFullName).c_str(), NULL);
+#endif
+		//if (arguments.empty())
+		//	EXECLP(springFullName.c_str(), Quote(springFullName).c_str(), scriptFullName.c_str(), NULL);
+		//else
+		//	EXECLP(springFullName.c_str(), Quote(springFullName).c_str(), arguments.c_str(), scriptFullName.c_str(), NULL);
+		// ---
 	}
 	else
 	{
@@ -1649,7 +1676,14 @@ int LuaUnsyncedCtrl::Restart(lua_State* L)
 		else
 			EXECLP(springFullName.c_str(), Quote(springFullName).c_str(), arguments.c_str(), NULL);
 	}
-	LogObject() << "Error in Restart: " << strerror(errno);
+	// Muratet (end of child process and log) ---
+#ifndef _WIN32
+	}
+#endif
+	//LogObject() << "Error in Restart: " << strerror(errno);
+	LogObject() << "The game should restart";
+	// ---
+	
 	lua_pushboolean(L, false);
 	return 1;
 }
