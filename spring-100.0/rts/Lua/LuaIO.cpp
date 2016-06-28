@@ -128,8 +128,11 @@ int LuaIO::pclose(lua_State* L, FILE* stream)
 
 int LuaIO::system(lua_State* L, const char* command)
 {
-	luaL_error(L, "the system() call is not available");
-	return -1; //
+	// Muratet (Bontemps) (Enable os.execute) ---
+	luaL_error(L, "the system() call is not available"); // Comment this
+	return -1; // Comment this
+	//return ::system(command); // Uncomment this
+	// ---
 }
 
 

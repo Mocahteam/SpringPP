@@ -1,0 +1,34 @@
+--[[
+Attackers!
+]]--
+
+attackerlist = {
+	"corak",
+	"armpw",
+	"corgator",
+	"corthud",
+	"corkrog",
+	"armham",
+	"armrock",
+	"armpw",
+	"armfav",
+	"armflash",
+	"armstump",
+	"armjanus",
+	"armham",
+	"corraid",
+	"armjeth",
+	"armwar",
+	"capturecar",
+	"corlevlr",
+	"armpnix",
+	"bomberdive",
+	"gunshipsupport",
+	"armzeus",
+	"fighter",
+	"armsnipe",
+	"hoverriot",
+	"hoverassault",
+	"nsaclash",
+	"armmanni"
+}

@@ -441,9 +441,14 @@ else  (MSVC)
 	add_definitions(-DBOOST_NO_FENV_H) # streflop overrides fenv.h
 
 	set(CMAKE_CXX_FLAGS_DEBUG           "${CXX_FLAGS_DEBUG_ADDITIONAL} -O0     ${DEBUG_WARNINGS}  -DDEBUG -D_DEBUG -DNO_CATCH_EXCEPTIONS")
+	# Muratet (Delete -DNDEBUG option that is unstable zith boost1.46.1 ) --- !! NOT IMPLEMENTED, LISTED JUST IN CASE !!
 	set(CMAKE_CXX_FLAGS_RELWITHDEBINFO  "${CXX_FLAGS_DEBUG_ADDITIONAL} -O2     ${COMMON_WARNINGS} -DNDEBUG")
 	set(CMAKE_CXX_FLAGS_RELEASE         "                              -O2     ${COMMON_WARNINGS} -DNDEBUG")
 	set(CMAKE_CXX_FLAGS_PROFILE         "                              -O2 -pg ${DEBUG_WARNINGS}  -DNDEBUG -DPROFILE")
+	# set(CMAKE_CXX_FLAGS_RELWITHDEBINFO  "${CXX_FLAGS_DEBUG_ADDITIONAL} -O2     ${COMMON_WARNINGS}")
+	# set(CMAKE_CXX_FLAGS_RELEASE         "                              -O2     ${COMMON_WARNINGS}")
+	# set(CMAKE_CXX_FLAGS_PROFILE         "                              -O2 -pg ${DEBUG_WARNINGS}  -DPROFILE")
+	# ---
 	set(CMAKE_MODULE_LINKER_FLAGS_PROFILE "-pg")
 	set(CMAKE_SHARED_LINKER_FLAGS_PROFILE "-pg")
 

@@ -20,6 +20,9 @@
 #include "System/creg/STL_Deque.h"
 #include "System/creg/STL_List.h"
 #include "System/creg/STL_Set.h"
+// Muratet (add Prog&Play #include) ---
+#include "Game/ProgAndPlay.h"
+// ---
 
 
 //////////////////////////////////////////////////////////////////////
@@ -125,6 +128,9 @@ bool CUnitHandler::AddUnit(CUnit* unit)
 	unitsByDefs[unit->team][unit->unitDef->id].insert(unit);
 
 	maxUnitRadius = std::max(unit->radius, maxUnitRadius);
+        // Muratet (call P&P addUnit) ---
+        pp->AddUnit(unit);
+        // ---
 	return true;
 }
 
@@ -147,6 +153,10 @@ void CUnitHandler::DeleteUnitNow(CUnit* delUnit)
 
 		int delTeam = delUnit->team;
 		int delType = delUnit->unitDef->id;
+
+                // Muratet (call P&P removeUnit) ---
+                pp->RemoveUnit(delUnit);
+                // ---
 
 		teamHandler->Team(delTeam)->RemoveUnit(delUnit, CTeam::RemoveDied);
 

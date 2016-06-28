@@ -35,6 +35,9 @@
 #include "SyncedGameCommands.h"
 #include "UnsyncedActionExecutor.h"
 #include "UnsyncedGameCommands.h"
+// Muratet (add Prog&Play #include) ---
+#include "ProgAndPlay.h"
+// ---
 #include "Game/GUI/PlayerRoster.h"
 #include "Game/GUI/PlayerRosterDrawer.h"
 #include "Game/Players/Player.h"
@@ -290,6 +293,9 @@ CGame::CGame(const std::string& mapName, const std::string& modName, ILoadSaveHa
 	, gameOver(false)
 {
 	game = this;
+	// Muratet (Bontemps) (Load ProgAndPlay) ---
+	pp = new CProgAndPlay();
+	// ---
 	jobDispatcher = new JobDispatcher();
 
 	memset(gameID, 0, sizeof(gameID));
@@ -360,10 +366,13 @@ CGame::~CGame()
 	KillRendering();
 	KillInterface();
 	KillSimulation();
+	// Muratet (SafeDelete Prog&Play) ---
+	SafeDelete(pp);
+	// ---
 
 	LOG("[%s][2]", __FUNCTION__);
 	SafeDelete(saveFile); // ILoadSaveHandler, depends on vfsHandler via ~IArchive
-	SafeDelete(jobDispatcher);
+        SafeDelete(jobDispatcher);
 
 	LOG("[%s][3]", __FUNCTION__);
 	CWordCompletion::DestroyInstance();
@@ -414,11 +423,16 @@ void CGame::LoadGame(const std::string& mapName, bool threaded)
 	//   when LoadingMT=1 (!!!)
 	Threading::SetGameLoadThread();
 	Watchdog::RegisterThread(WDT_LOAD);
-
+	
 	if (!gu->globalQuit) LoadMap(mapName);
 	if (!gu->globalQuit) LoadDefs();
 	if (!gu->globalQuit) PreLoadSimulation();
 	if (!gu->globalQuit) PreLoadRendering();
+	/*
+	// Muratet (Bontemps) (Load ProgAndPlay) ---
+	if (!gu->globalQuit) pp = new CProgAndPlay();
+	// ---
+	*/
 	if (!gu->globalQuit) PostLoadSimulation();
 	if (!gu->globalQuit) PostLoadRendering();
 	if (!gu->globalQuit) LoadInterface();
@@ -436,7 +450,6 @@ void CGame::LoadGame(const std::string& mapName, bool threaded)
 	Watchdog::DeregisterThread(WDT_LOAD);
 	AddTimedJobs();
 }
-
 
 void CGame::LoadMap(const std::string& mapName)
 {
@@ -1019,6 +1032,9 @@ bool CGame::Update()
 	}
 
 	ENTER_SYNCED_CODE();
+	// Muratet (Prog&Play update) ---
+	pp->Update();
+	// ---
 	SendClientProcUsage();
 	ClientReadNet(); // this can issue new SimFrame()s
 

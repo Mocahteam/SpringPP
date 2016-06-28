@@ -30,6 +30,9 @@ rts/lib/oscpack                   Open Sound Control library (used for statistic
 rts/lib/streflop/libm             Math libary (long double, double and float implementations)
 rts/lib/streflop/softfloat        Emulated FP library
 rts/lib/streflop                  STandalone REproducable FLOating Point lib
+# Muratet (Specify Prog&Play Supplier directory) ---
+rts/lib/pp                        Prog&Play Supplier library
+# ---
 rts/Lua                           Spring Lua libraries
 rts/Map                           Map loading & rendering
 rts/Map/SM3                       SM3 map support

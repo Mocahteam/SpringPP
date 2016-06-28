@@ -1,0 +1,51 @@
+what it wants to do:
+
+./run-test
+fetch + compile latest git
+fetch latest test-game
+runs spring + testgame
+
+
+run-test.exe
+fetch + compile latest git
+fetch latest test-game
+run spring + testgame
+
+
+what is needed:
+
+environement to compile spring (bad!)
+downloader for game with tests included
+
+
+=general=
+ * extra namespace
+ * add an --force switch to force redownloading/updating (override cache)
+ * make some things configureable
+ * fix build system (code-plugable)
+ * add version-check (for current stable / getting download-link / ...)
+
+=library=
+ * make lib + header
+ * add init function to set data-dir
+ * disable logging
+ * make logging configurable, cron/script-compatible, quiet mode, remove printf?
+ * keep somewhere a log what happened
+
+=http=
+ * if filename != gamename, file can't be found through current sf interface
+
+=plasma=
+ * search for posibility to disable writing RECV.log/SEND.log in debug builds
+
+=rapid=
+ * use /packages/selected.list for pinned tags / downloaded files
+ * dont download directly to pool or packages dir but to a temp dir
+ * use c++ streams http://stackoverflow.com/questions/3023988/can-one-read-a-remote-file-as-an-istream-with-libcurl ?
+ * (clean?) duplicate search results (with same md5)
+ * delete old games?
+ * check for errors
+
+=widget=
+ * remove it or finish it? it does't fit to the other downloaders (widgets are not needed to play the game...)
+ * backup for old widgets (before getting overwritten)

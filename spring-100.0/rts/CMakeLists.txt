@@ -73,7 +73,10 @@ LIST(APPEND engineCommonLibraries ${IL_LIBRARIES} ${JPEG_LIBRARY} ${PNG_LIBRARY}
 LIST(APPEND engineCommonLibraries ${Boost_REGEX_LIBRARY} ${Boost_PROGRAM_OPTIONS_LIBRARY} ${Boost_SIGNALS_LIBRARY})
 LIST(APPEND engineCommonLibraries ${Boost_SYSTEM_LIBRARY} ${Boost_CHRONO_LIBRARY_WITH_RT} ${Boost_FILESYSTEM_LIBRARY})
 LIST(APPEND engineCommonLibraries 7zip ${SPRING_MINIZIP_LIBRARY} ${ZLIB_LIBRARY})
-LIST(APPEND engineCommonLibraries lua luasocket archives streflop assimp)
+# Muratet (Add pp-supplier and pp-traces lib to engineCommonLibraries) ---
+# LIST(APPEND engineCommonLibraries lua luasocket archives streflop assimp)
+LIST(APPEND engineCommonLibraries lua luasocket archives streflop assimp pp-supplier)
+# ---
 include_directories(${ZLIB_INCLUDE_DIR})
 
 IF (WIN32)

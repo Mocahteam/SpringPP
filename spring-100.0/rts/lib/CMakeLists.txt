@@ -7,6 +7,9 @@ ADD_SUBDIRECTORY(7z)
 ADD_SUBDIRECTORY(minizip)
 ADD_SUBDIRECTORY(streflop)
 ADD_SUBDIRECTORY(headlessStubs)
+# Muratet (Add P&P subdirectory) ---
+ADD_SUBDIRECTORY(pp)
+# ---
 
 # minizip & unzip is the same, use minizip for assimp:
 set(UNZIP_FOUND TRUE)

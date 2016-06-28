@@ -1,0 +1,27 @@
+*\.orig
+*~
+\.pc*
+\.*swp
+obj-*
+*\.cmake
+/debian/*\.log
+/html
+build/
+/curl*
+/zlib*
+/mingwlibs
+/dist
+# output
+/src/libspringdownloader.pc
+/src/pr-downloader
+*.a
+*.so
+
+# CMake
+Makefile
+CMakeCache.txt
+CMakeFiles
+
+#codeblocks project file
+/pr-downloader.cbp
+
