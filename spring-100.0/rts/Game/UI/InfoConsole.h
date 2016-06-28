@@ -1,0 +1,87 @@
+/* This file is part of the Spring engine (GPL v2 or later), see LICENSE.html */
+
+#ifndef INFO_CONSOLE_H
+#define INFO_CONSOLE_H
+
+#include "InputReceiver.h"
+#include "System/float3.h"
+#include "System/EventClient.h"
+#include "System/Log/LogSinkHandler.h"
+#include "System/Misc/SpringTime.h"
+
+#include <deque>
+#include <string>
+#include <list>
+#include <boost/thread/recursive_mutex.hpp>
+
+class CInfoConsole: public CInputReceiver, public CEventClient, public ILogSink
+{
+public:
+	CInfoConsole();
+	virtual ~CInfoConsole();
+
+	void Update();
+	void Draw();
+	void PushNewLinesToEventHandler();
+
+	void RecordLogMessage(const std::string& section, int level,
+			const std::string& text);
+
+	bool WantsEvent(const std::string& eventName) {
+		return (eventName == "LastMessagePosition");
+	}
+	void LastMessagePosition(const float3& pos);
+	const float3& GetMsgPos(const float3& defaultPos = ZeroVector);
+	unsigned int GetMsgPosCount() const { return lastMsgPositions.size(); }
+
+	bool enabled;
+
+public:
+	static const size_t maxLastMsgPos;
+	static const size_t maxRawLines;
+
+	struct RawLine {
+		RawLine(const std::string& text, const std::string& section, int level,
+				int id)
+			: text(text)
+			, section(section)
+			, level(level)
+			, id(id)
+			{}
+		std::string text;
+		std::string section;
+		int level;
+		int id;
+	};
+
+	int GetRawLines(std::deque<RawLine>& copy);
+
+private:
+	struct InfoLine {
+		std::string text;
+		spring_time timeout;
+	};
+
+	std::list<float3> lastMsgPositions;
+	std::list<float3>::iterator lastMsgIter;
+
+	std::deque<RawLine> rawData;
+	std::deque<InfoLine> data;
+
+	size_t newLines;
+	int rawId;
+
+	mutable boost::recursive_mutex infoConsoleMutex;
+
+	int lifetime;
+	float xpos;
+	float ypos;
+	float width;
+	float height;
+	float fontScale;
+	float fontSize;
+
+	size_t maxLines;
+};
+
+#endif /* INFO_CONSOLE_H */

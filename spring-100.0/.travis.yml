@@ -1,0 +1,37 @@
+
+os:
+  - linux
+#  - osx
+
+language: cpp
+compiler:
+  - gcc
+#  - clang
+env:
+  matrix:
+    - TARGET="AAI CppTestAI E323AI HughAI KAIK NullAI NullJavaAI NullOOJavaAI RAI Shard"
+    - TARGET=engine-headless
+    - TARGET=tests
+
+matrix:
+  fast_finish: true
+
+before_install:
+  - tools/scripts/travis_before_install.sh
+
+install:
+  - tools/scripts/travis_install.sh
+
+before_script:
+  - cmake .
+
+script:
+  - make -k $TARGET
+
+notifications:
+  irc:
+    channels:
+      - chat.freenode.net#taspring
+    on_success: change
+    on_failure: change
+
