@@ -662,14 +662,29 @@ int LuaVFS::BuildPPGame(lua_State* L) {
 	for (int i = 0 ; i < tracesList.size() ; i++) {
 		vector<string> trace;
 		boost::split(trace, tracesList[i], boost::is_any_of(","));
-		LogDBG(trace[0].c_str());
-		LogDBG(trace[1].c_str());
-		const string tracePath = "traces/" + trace[0] + "/" + trace[1] + ".xml";
+		// Traces
+		const string tracePath = "traces/data/expert/" + trace[0] + "/" + trace[1] + ".xml";
 		ifstream traceFile(tracePath.c_str());
 		string traceString((istreambuf_iterator<char>(traceFile)), istreambuf_iterator<char>());
 		const string traceZipPath = "traces/expert/" + trace[0] + "/" + trace[1] + ".xml";
 		zipOpenNewFileInZip(gameZip, traceZipPath.c_str(), zipfi, NULL, 0, NULL, 0, NULL, Z_DEFLATED, Z_BEST_COMPRESSION);
 		zipWriteInFileInZip(gameZip, traceString.c_str(), traceString.length());
+		zipCloseFileInZip(gameZip);
+		// Log
+		const string logPath = "traces/data/expert/" + trace[0] + "/" + trace[1] + ".log";
+		ifstream logFile(logPath.c_str());
+		string logString((istreambuf_iterator<char>(logFile)), istreambuf_iterator<char>());
+		const string logZipPath = "traces/expert/" + trace[0] + "/" + trace[1] + ".log";
+		zipOpenNewFileInZip(gameZip, logZipPath.c_str(), zipfi, NULL, 0, NULL, 0, NULL, Z_DEFLATED, Z_BEST_COMPRESSION);
+		zipWriteInFileInZip(gameZip, logString.c_str(), logString.length());
+		zipCloseFileInZip(gameZip);
+		// Feedbacks
+		const string fbPath = "traces/data/expert/" + trace[0] + "/feedbacks.xml";
+		ifstream fbFile(fbPath.c_str());
+		string fbString((istreambuf_iterator<char>(fbFile)), istreambuf_iterator<char>());
+		const string fbZipPath = "traces/expert/" + trace[0] + "/feedbacks.xml";
+		zipOpenNewFileInZip(gameZip, fbZipPath.c_str(), zipfi, NULL, 0, NULL, 0, NULL, Z_DEFLATED, Z_BEST_COMPRESSION);
+		zipWriteInFileInZip(gameZip, fbString.c_str(), fbString.length());
 		zipCloseFileInZip(gameZip);
 	}
 	

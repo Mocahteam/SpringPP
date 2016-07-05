@@ -1,0 +1,570 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{EF72E4F8-4594-46EC-8880-86A2B9B6907D}</ProjectGuid>
+    <RootNamespace>Shard</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.30319.1</_ProjectFileVersion>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(ProjectDir)Output\$(Configuration)\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(ProjectDir)Intermediate\$(Configuration)\</IntDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(ProjectDir)Output\$(Configuration)\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(ProjectDir)Intermediate\$(Configuration)\</IntDir>
+    <CodeAnalysisRuleSet Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">AllRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRules Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" />
+    <CodeAnalysisRuleAssemblies Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" />
+    <CodeAnalysisRuleSet Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">AllRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRules Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" />
+    <CodeAnalysisRuleAssemblies Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" />
+    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\..\Interfaces\C\src;..\..\..\..\;..\lib\lua;..\..\..\Wrappers\Cpp\src;$(IncludePath)</IncludePath>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <AdditionalIncludeDirectories>..\..\..\..\AI\Wrappers\Cpp;..\..\..\..\rts;..\..\..\..\;..\src\lua;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>BUILDING_SKIRMISH_AI;BUILDING_AI;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MinimalRebuild>true</MinimalRebuild>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <ProgramDataBaseFileName>$(IntDir)linker\vc90.pdb</ProgramDataBaseFileName>
+      <WarningLevel>Level4</WarningLevel>
+      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+      <CallingConvention>StdCall</CallingConvention>
+    </ClCompile>
+    <Link>
+      <OutputFile>D:\Spring\AI\Skirmish\$(ProjectName)\dev\SkirmishAI.dll</OutputFile>
+      <ModuleDefinitionFile>export.def</ModuleDefinitionFile>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <ProgramDatabaseFile>$(TargetDir)linker\$(TargetName).pdb</ProgramDatabaseFile>
+      <ProfileGuidedDatabase>
+      </ProfileGuidedDatabase>
+      <ImportLibrary>$(TargetDir)linker\$(TargetName).lib</ImportLibrary>
+      <TargetMachine>MachineX86</TargetMachine>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <Optimization>MaxSpeed</Optimization>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <AdditionalIncludeDirectories>..\..\..\..\AI\Wrappers\Cpp;..\..\..\..\rts;..\..\..\..\;..\src\lua;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>BUILDING_SKIRMISH_AI;BUILDING_AI;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <ProgramDataBaseFileName>$(IntDir)linker\vc90.pdb</ProgramDataBaseFileName>
+      <WarningLevel>Level4</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <CallingConvention>StdCall</CallingConvention>
+    </ClCompile>
+    <Link>
+      <OutputFile>D:\Spring\AI\Skirmish\$(ProjectName)\dev\SkirmishAI.dll</OutputFile>
+      <ModuleDefinitionFile>export.def</ModuleDefinitionFile>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <ProgramDatabaseFile>$(TargetDir)linker\$(TargetName).pdb</ProgramDatabaseFile>
+      <OptimizeReferences>true</OptimizeReferences>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <ProfileGuidedDatabase>
+      </ProfileGuidedDatabase>
+      <ImportLibrary>$(TargetDir)linker\$(TargetName).lib</ImportLibrary>
+      <TargetMachine>MachineX86</TargetMachine>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\AbstractCamera.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\AbstractCheats.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\AbstractCommand.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\AbstractCommandDescription.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\AbstractDamage.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\AbstractDataDirs.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\AbstractDebug.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\AbstractDrawer.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\AbstractEconomy.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\AbstractEngine.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\AbstractFeature.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\AbstractFeatureDef.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\AbstractFigure.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\AbstractFile.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\AbstractFlankingBonus.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\AbstractGame.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\AbstractGraphDrawer.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\AbstractGraphLine.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\AbstractGroup.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\AbstractGui.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\AbstractInfo.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\AbstractLine.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\AbstractLog.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\AbstractLua.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\AbstractMap.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\AbstractMod.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\AbstractModParam.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\AbstractMoveData.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\AbstractOOAICallback.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\AbstractOptionValues.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\AbstractOrderPreview.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\AbstractOverlayTexture.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\AbstractPathDrawer.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\AbstractPathing.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\AbstractPoint.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\AbstractResource.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\AbstractRoots.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\AbstractShield.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\AbstractSkirmishAI.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\AbstractSkirmishAIs.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\AbstractTeams.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\AbstractUnit.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\AbstractUnitDef.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\AbstractVersion.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\AbstractWeaponDef.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\AbstractWeaponMount.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\CombinedCallbackBridge.c" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\StubCamera.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\StubCheats.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\StubCommand.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\StubCommandDescription.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\StubDamage.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\StubDataDirs.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\StubDebug.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\StubDrawer.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\StubEconomy.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\StubEngine.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\StubFeature.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\StubFeatureDef.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\StubFigure.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\StubFile.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\StubFlankingBonus.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\StubGame.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\StubGraphDrawer.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\StubGraphLine.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\StubGroup.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\StubGui.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\StubInfo.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\StubLine.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\StubLog.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\StubLua.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\StubMap.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\StubMod.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\StubModParam.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\StubMoveData.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\StubOOAICallback.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\StubOptionValues.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\StubOrderPreview.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\StubOverlayTexture.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\StubPathDrawer.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\StubPathing.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\StubPoint.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\StubResource.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\StubRoots.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\StubShield.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\StubSkirmishAI.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\StubSkirmishAIs.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\StubTeams.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\StubUnit.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\StubUnitDef.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\StubVersion.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\StubWeaponDef.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\StubWeaponMount.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\WrappCamera.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\WrappCheats.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\WrappCurrentCommand.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\WrappDamage.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\WrappDataDirs.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\WrappDebug.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\WrappDrawer.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\WrappEconomy.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\WrappEngine.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\WrappFeature.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\WrappFeatureDef.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\WrappFigure.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\WrappFile.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\WrappFlankingBonus.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\WrappGame.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\WrappGraphDrawer.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\WrappGraphLine.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\WrappGroup.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\WrappGroupSupportedCommand.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\WrappGui.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\WrappInfo.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\WrappLine.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\WrappLog.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\WrappLua.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\WrappMap.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\WrappMod.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\WrappModParam.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\WrappMoveData.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\WrappOOAICallback.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\WrappOptionValues.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\WrappOrderPreview.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\WrappOverlayTexture.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\WrappPathDrawer.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\WrappPathing.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\WrappPoint.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\WrappResource.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\WrappRoots.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\WrappShield.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\WrappSkirmishAI.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\WrappSkirmishAIs.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\WrappTeams.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\WrappUnit.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\WrappUnitDef.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\WrappUnitSupportedCommand.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\WrappVersion.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\WrappWeaponDef.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src-generated\WrappWeaponMount.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src\AIColor.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src\AIEvent.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src\AIException.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src\AIFloat3.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src\CallbackAIException.cpp" />
+    <ClCompile Include="..\..\..\Wrappers\Cpp\src\EventAIException.cpp" />
+    <ClCompile Include="..\lib\lua\lapi.c" />
+    <ClCompile Include="..\lib\lua\lauxlib.c" />
+    <ClCompile Include="..\lib\lua\lbaselib.c" />
+    <ClCompile Include="..\lib\lua\lcode.c" />
+    <ClCompile Include="..\lib\lua\ldblib.c" />
+    <ClCompile Include="..\lib\lua\ldebug.c" />
+    <ClCompile Include="..\lib\lua\ldo.c" />
+    <ClCompile Include="..\lib\lua\ldump.c" />
+    <ClCompile Include="..\lib\lua\lfunc.c" />
+    <ClCompile Include="..\lib\lua\lgc.c" />
+    <ClCompile Include="..\lib\lua\linit.c" />
+    <ClCompile Include="..\lib\lua\liolib.c" />
+    <ClCompile Include="..\lib\lua\llex.c" />
+    <ClCompile Include="..\lib\lua\lmathlib.c" />
+    <ClCompile Include="..\lib\lua\lmem.c" />
+    <ClCompile Include="..\lib\lua\loadlib.c" />
+    <ClCompile Include="..\lib\lua\lobject.c" />
+    <ClCompile Include="..\lib\lua\lopcodes.c" />
+    <ClCompile Include="..\lib\lua\loslib.c" />
+    <ClCompile Include="..\lib\lua\lparser.c" />
+    <ClCompile Include="..\lib\lua\lstate.c" />
+    <ClCompile Include="..\lib\lua\lstring.c" />
+    <ClCompile Include="..\lib\lua\lstrlib.c" />
+    <ClCompile Include="..\lib\lua\ltable.c" />
+    <ClCompile Include="..\lib\lua\ltablib.c" />
+    <ClCompile Include="..\lib\lua\ltm.c" />
+    <ClCompile Include="..\lib\lua\lundump.c" />
+    <ClCompile Include="..\lib\lua\lvm.c" />
+    <ClCompile Include="..\lib\lua\lzio.c" />
+    <ClCompile Include="..\lib\lua\print.c" />
+    <ClCompile Include="..\src\AIExport.cpp" />
+    <ClCompile Include="..\src\CppTestAI.cpp" />
+    <ClCompile Include="..\src\TestAI.cpp" />
+    <ClCompile Include="..\src\API\spring\SpringGame.cpp" />
+    <ClCompile Include="..\src\API\spring\SpringMap.cpp" />
+    <ClCompile Include="..\src\API\spring\SpringMapFeature.cpp" />
+    <ClCompile Include="..\src\API\spring\SpringUnit.cpp" />
+    <ClCompile Include="..\src\API\spring\SpringUnitType.cpp" />
+    <ClCompile Include="..\src\API\api_wrap.cpp">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">STATIC_LINKED;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\AbstractCamera.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\AbstractCheats.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\AbstractCommand.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\AbstractCommandDescription.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\AbstractDamage.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\AbstractDataDirs.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\AbstractDebug.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\AbstractDrawer.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\AbstractEconomy.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\AbstractEngine.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\AbstractFeature.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\AbstractFeatureDef.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\AbstractFigure.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\AbstractFile.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\AbstractFlankingBonus.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\AbstractGame.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\AbstractGraphDrawer.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\AbstractGraphLine.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\AbstractGroup.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\AbstractGui.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\AbstractInfo.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\AbstractLine.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\AbstractLog.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\AbstractLua.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\AbstractMap.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\AbstractMod.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\AbstractModParam.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\AbstractMoveData.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\AbstractOOAICallback.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\AbstractOptionValues.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\AbstractOrderPreview.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\AbstractOverlayTexture.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\AbstractPathDrawer.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\AbstractPathing.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\AbstractPoint.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\AbstractResource.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\AbstractRoots.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\AbstractShield.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\AbstractSkirmishAI.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\AbstractSkirmishAIs.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\AbstractTeams.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\AbstractUnit.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\AbstractUnitDef.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\AbstractVersion.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\AbstractWeaponDef.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\AbstractWeaponMount.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\Camera.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\Cheats.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\CombinedCallbackBridge.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\Command.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\CommandDescription.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\Damage.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\DataDirs.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\Debug.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\Drawer.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\Economy.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\Engine.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\Feature.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\FeatureDef.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\Figure.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\File.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\FlankingBonus.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\Game.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\GraphDrawer.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\GraphLine.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\Group.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\Gui.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\IncludesHeaders.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\IncludesSources.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\Info.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\Line.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\Log.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\Lua.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\Map.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\Mod.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\ModParam.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\MoveData.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\OOAICallback.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\OptionValues.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\OrderPreview.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\OverlayTexture.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\PathDrawer.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\Pathing.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\Point.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\Resource.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\Roots.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\Shield.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\SkirmishAI.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\SkirmishAIs.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\StubCamera.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\StubCheats.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\StubCommand.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\StubCommandDescription.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\StubDamage.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\StubDataDirs.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\StubDebug.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\StubDrawer.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\StubEconomy.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\StubEngine.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\StubFeature.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\StubFeatureDef.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\StubFigure.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\StubFile.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\StubFlankingBonus.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\StubGame.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\StubGraphDrawer.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\StubGraphLine.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\StubGroup.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\StubGui.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\StubInfo.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\StubLine.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\StubLog.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\StubLua.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\StubMap.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\StubMod.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\StubModParam.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\StubMoveData.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\StubOOAICallback.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\StubOptionValues.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\StubOrderPreview.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\StubOverlayTexture.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\StubPathDrawer.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\StubPathing.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\StubPoint.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\StubResource.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\StubRoots.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\StubShield.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\StubSkirmishAI.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\StubSkirmishAIs.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\StubTeams.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\StubUnit.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\StubUnitDef.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\StubVersion.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\StubWeaponDef.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\StubWeaponMount.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\Teams.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\Unit.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\UnitDef.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\Version.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\WeaponDef.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\WeaponMount.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\WrappCamera.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\WrappCheats.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\WrappCurrentCommand.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\WrappDamage.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\WrappDataDirs.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\WrappDebug.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\WrappDrawer.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\WrappEconomy.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\WrappEngine.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\WrappFeature.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\WrappFeatureDef.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\WrappFigure.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\WrappFile.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\WrappFlankingBonus.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\WrappGame.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\WrappGraphDrawer.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\WrappGraphLine.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\WrappGroup.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\WrappGroupSupportedCommand.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\WrappGui.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\WrappInfo.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\WrappLine.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\WrappLog.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\WrappLua.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\WrappMap.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\WrappMod.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\WrappModParam.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\WrappMoveData.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\WrappOOAICallback.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\WrappOptionValues.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\WrappOrderPreview.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\WrappOverlayTexture.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\WrappPathDrawer.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\WrappPathing.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\WrappPoint.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\WrappResource.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\WrappRoots.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\WrappShield.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\WrappSkirmishAI.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\WrappSkirmishAIs.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\WrappTeams.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\WrappUnit.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\WrappUnitDef.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\WrappUnitSupportedCommand.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\WrappVersion.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\WrappWeaponDef.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src-generated\WrappWeaponMount.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src\AIColor.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src\AIEvent.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src\AIException.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src\AIFloat3.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src\CallbackAIException.h" />
+    <ClInclude Include="..\..\..\Wrappers\Cpp\src\EventAIException.h" />
+    <ClInclude Include="..\lib\lua\lapi.h" />
+    <ClInclude Include="..\lib\lua\lauxlib.h" />
+    <ClInclude Include="..\lib\lua\lcode.h" />
+    <ClInclude Include="..\lib\lua\ldebug.h" />
+    <ClInclude Include="..\lib\lua\ldo.h" />
+    <ClInclude Include="..\lib\lua\lfunc.h" />
+    <ClInclude Include="..\lib\lua\lgc.h" />
+    <ClInclude Include="..\lib\lua\llex.h" />
+    <ClInclude Include="..\lib\lua\llimits.h" />
+    <ClInclude Include="..\lib\lua\lmem.h" />
+    <ClInclude Include="..\lib\lua\lobject.h" />
+    <ClInclude Include="..\lib\lua\lopcodes.h" />
+    <ClInclude Include="..\lib\lua\lparser.h" />
+    <ClInclude Include="..\lib\lua\lstate.h" />
+    <ClInclude Include="..\lib\lua\lstring.h" />
+    <ClInclude Include="..\lib\lua\ltable.h" />
+    <ClInclude Include="..\lib\lua\ltm.h" />
+    <ClInclude Include="..\lib\lua\lua.h" />
+    <ClInclude Include="..\lib\lua\luaconf.h" />
+    <ClInclude Include="..\lib\lua\lualib.h" />
+    <ClInclude Include="..\lib\lua\lundump.h" />
+    <ClInclude Include="..\lib\lua\lvm.h" />
+    <ClInclude Include="..\lib\lua\lzio.h" />
+    <ClInclude Include="..\src\AIExport.h" />
+    <ClInclude Include="..\src\CppTestAI.h" />
+    <ClInclude Include="..\src\TestAI.h" />
+    <ClInclude Include="..\src\API\Position.h" />
+    <ClInclude Include="..\src\API\interfaces\api.h" />
+    <ClInclude Include="..\src\API\interfaces\IAI.h" />
+    <ClInclude Include="..\src\API\interfaces\IGame.h" />
+    <ClInclude Include="..\src\API\interfaces\IMap.h" />
+    <ClInclude Include="..\src\API\interfaces\IMapFeature.h" />
+    <ClInclude Include="..\src\API\interfaces\IUnit.h" />
+    <ClInclude Include="..\src\API\interfaces\IUnitType.h" />
+    <ClInclude Include="..\src\API\interfaces\ResourceData.h" />
+    <ClInclude Include="..\src\API\interfaces\ResourceTransfer.h" />
+    <ClInclude Include="..\src\API\spring\spring_api.h" />
+    <ClInclude Include="..\src\API\spring\SpringGame.h" />
+    <ClInclude Include="..\src\API\spring\SpringMap.h" />
+    <ClInclude Include="..\src\API\spring\SpringMapFeature.h" />
+    <ClInclude Include="..\src\API\spring\SpringUnit.h" />
+    <ClInclude Include="..\src\API\spring\SpringUnitType.h" />
+    <ClInclude Include="..\src\API\swig.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="export.def" />
+    <CustomBuild Include="..\data\AIInfo.lua">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Copying AIInfo.lua</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">mkdir "$(TargetDir)"
+copy "%(FullPath)" "$(TargetDir)"
+xcopy "%(RootDir)%(Directory)\ai" "$(TargetDir)ai\" /F /E /Y /H /R
+</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">AIInfo.lua;%(Outputs)</Outputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying AIInfo.lua</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">mkdir "$(TargetDir)"
+copy "%(FullPath)" "$(TargetDir)"
+xcopy "%(RootDir)%(Directory)\ai" "$(TargetDir)ai\" /F /E /Y /H /R
+</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">AIInfo.lua;%(Outputs)</Outputs>
+    </CustomBuild>
+    <CustomBuild Include="..\data\AIOptions.lua">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(Outputs)</Outputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(Outputs)</Outputs>
+    </CustomBuild>
+    <CustomBuild Include="..\src\API\api.i">
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">swig -v -c++ -lua  -o %(RootDir)%(Directory)api_wrap.cpp %(FullPath)
+swig -c++ -lua -external-runtime ../src/API/swig.h
+</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">api.i;%(Outputs)</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">swig -v -c++ -lua  -o %(RootDir)%(Directory)api_wrap.cpp %(FullPath)
+swig -c++ -lua -external-runtime ../src/API/swig.h
+</Command>
+    </CustomBuild>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

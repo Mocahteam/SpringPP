@@ -56,6 +56,11 @@ class LuaVFS {
 
 		static int ZlibCompress(lua_State* L);
 		static int ZlibDecompress(lua_State* L);
+		
+		// Muratet (Bontemps) ---
+		static int BuildPPEditor(lua_State* L);
+		static int BuildPPGame(lua_State* L);
+		// ---
 
 		// string packing utilities
 		static int PackU8(lua_State* L);
