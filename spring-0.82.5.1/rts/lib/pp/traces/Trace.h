@@ -43,18 +43,62 @@ public:
 	  *
 	  * Cette fonction est implémentée dans les classes héritant de Trace.
 	  *
+	  * \return la longueur de la trace.
+	  *
 	  * \see Sequence::length
 	  * \see Call::length
 	  * \see Event::length
 	  */
 	virtual unsigned int length() const = 0;
+	
+	/**
+	  * \brief Comparaison de la trace avec une trace \p t.
+	  *
+	  * Cette fonction est implémentée dans les classes héritant de Trace.
+	  *
+	  * \param t : la trace utilisée pour la comparaison.
+	  *
+	  * \return vrai si la trace est considérée comme étant égale à \p t, ou faux sinon.
+	  */
 	virtual bool operator==(Trace *t) const = 0;
+	
+	/**
+	  * \brief Copie de la trace.
+	  *
+	  * \return un pointeur intelligent vers la nouvelle trace créée suite au clonage.
+	  */
 	virtual sp_trace clone() const = 0;
+	
+	/**
+	  * \brief Affichage de la trace.
+	  *
+	  * \param os : le flux de sortie utilisée pour l'affichage.
+	  *
+	  */
 	virtual void display(std::ostream &os = std::cout) const = 0;
+	
+	/**
+	  * \brief Remise à zéro du pointeur \p aligned.
+	  *
+	  * Cette fonction permet de supprimer le lien vers une trace avec laquelle cette trace était alignée.
+	  *
+	  * \see Sequence::resetAligned
+	  */
 	virtual void resetAligned();
 	
+	/**
+	  * \brief Recherche d'une chaîne de caractères dans un tableau de chaînes de caractères.
+	  *
+	  * \param ch : la chaîne de caractères recherchée dans \p arr.
+	  * \param arr : le tableau dans lequel est recherchée \p ch. \p arr doit obligatoirement se terminer par NULL.
+	  *
+	  * \return -1 si \p ch n'est pas présent dans \p arr, et l'indice de sa position dans \p arr sinon.
+	  */
 	static int inArray(const char *ch, const char *arr[]);
-	static unsigned int getLength(const std::vector<sp_trace>& traces);
+	
+	/**
+	  * Get the neighbours of 'spt' in 'traces' in the range [ind_spt - sub_to_ind, ind_spt + add_to_ind] where ind_spt is the index of 'spt' in 'traces'. 'spt' have to be included in traces.
+	  */
 	static sp_trace getNeighbour(const std::vector<sp_trace>& traces, const sp_trace& spt, int add_to_ind);
 	
 	static int numTab;
@@ -94,14 +138,14 @@ public:
 	void setDelayed();
 	
 	/**
-	  * \brief Getter pour la variable info.
+	  * \brief Getter pour la variable \p info.
 	  *
 	  * \return la chaîne de caractères \p info de la trace.
 	  */
 	std::string getInfo() const;
 	
 	/**
-	  * \brief Setter pour la variable info.
+	  * \brief Setter pour la variable \p info.
 	  *
 	  * \param info la nouvelle valeur du champ \p info pour la trace.
 	  */

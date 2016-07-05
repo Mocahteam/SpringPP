@@ -1,5 +1,4 @@
 #include "Sequence.h"
-#include "TracesAnalyser.h"
 
 Sequence::Sequence(std::string info, bool num_fixed) : Trace(SEQUENCE,info), num_fixed(num_fixed), num(0), pt(0), valid(false), endReached(false), shared(false), root(false) {}
 

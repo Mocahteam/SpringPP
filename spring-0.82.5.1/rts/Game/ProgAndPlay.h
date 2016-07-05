@@ -44,6 +44,7 @@ private:
 	bool missionEnded;
 	bool tracePlayer;
 	bool archiveLoaded;
+	std::string photoFilename;
 	std::string archivePath;
 	std::string missionName;
 	std::string lang;
@@ -60,14 +61,13 @@ private:
 	
 	const std::string loadFile(std::string full_path);
 	const std::string loadFileFromArchive(std::string full_path);
+	void publishOnFacebook();
+	void sendRequestToServer();
+	void openFacebookUrl();
 };
 
 static int endless_loop_frame_counter = -1;
 static int units_idled_frame_counter = -1;
-
-void publishOnFacebook();
-std::string sendIdRequest(bool post_request);
-void openFacebookUrl(std::string photoId);
 
 extern CProgAndPlay* pp;
 

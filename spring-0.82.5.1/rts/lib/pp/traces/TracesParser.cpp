@@ -309,7 +309,7 @@ Trace::sp_trace TracesParser::handleLine(const std::string& s) {
 		else if (tokens[ind].compare("execution_end_time") == 0) {
 			t = new EndExecutionEvent(stoi(tokens[ind+1]));
 		}
-		else if (Trace::inArray(tokens[ind].c_str(), Event::concatEventsArr) > -1) {
+		else if (INCLUDE_EVENTS == 1 && Trace::inArray(tokens[ind].c_str(), Event::concatEventsArr) > -1) {
 			t = new Event(tokens[ind]);
 		}
 		else if (Trace::inArray(tokens[ind].c_str(), Call::noParamCallLabelsArr) > -1) {
@@ -693,7 +693,7 @@ void TracesParser::compactHistory() {
 }
 
 void TracesParser::detectSequences() {
-	unsigned int i, j, seq_start, seq_end, max_size = 2, sps_up_len;
+	unsigned int i, j, seq_start, seq_end, max_size = 2;
     bool found, climb = false;
 	Sequence::sp_sequence sps_up, sps_down, sps_res;
 	while(max_size < traces.size() - start) {
@@ -723,8 +723,7 @@ void TracesParser::detectSequences() {
 					j = seq_start;
 					while(j < i)
 						sps_up->addTrace(traces.at(j++));
-					sps_up_len = sps_up->length();
-					if (checkFeasibility(sps_up_len,j)) {
+					if (checkFeasibility(sps_up->length(),j)) {
 						#ifdef DEBUG
 							os << "sps_up : " << std::endl;
 							sps_up->display(os);
@@ -733,7 +732,7 @@ void TracesParser::detectSequences() {
 						found = true;
 						while (found) {
 							sps_down = boost::make_shared<Sequence>(1);
-							while(j < traces.size() && sps_down->length() < sps_up_len)
+							while(j < traces.size() && sps_down->length() < sps_up->length())
 								sps_down->addTrace(traces.at(j++));
 							#ifdef DEBUG
 								os << "sps_down : " << std::endl;
@@ -761,14 +760,14 @@ void TracesParser::detectSequences() {
 							while(it != traces.end())
 								(*it++)->indSearch = -1;
 							i = seq_start + max_size;
-							// #ifdef DEBUG
-								// os << "seq_end : " << seq_end << std::endl;
-								// os << "i : " << i << std::endl;
-								// it = traces.begin();
-								// while (it != traces.end())
-									// (*it++)->display(os);
-								// os << std::endl;
-							// #endif
+							#ifdef DEBUG
+								os << "seq_end : " << seq_end << std::endl;
+								os << "i : " << i << std::endl;
+								it = traces.begin();
+								while (it != traces.end())
+									(*it++)->display(os);
+								os << std::endl;
+							#endif
 						}
 						else {
 							#ifdef DEBUG
@@ -840,11 +839,15 @@ Sequence::sp_sequence TracesParser::mergeSequences(Sequence::sp_sequence sps_up,
 		downStack.push(sps_down);
 		std::vector<Trace::sp_trace> events;
 		Trace::sp_trace spt_up = sps_up->next();
-		while (!sps_up->isEndReached() && sps_up->at(sps_up->getPt())->isEvent())
-			events.push_back(sps_up->next());
+		while (!sps_up->isEndReached() && spt_up->isEvent()) {
+			events.push_back(spt_up);
+			spt_up = sps_up->next();
+		}
 		Trace::sp_trace spt_down = sps_down->next();
-		while (!sps_down->isEndReached() && sps_down->at(sps_down->getPt())->isEvent())
-			events.push_back(sps_down->next());
+		while (!sps_down->isEndReached() && spt_down->isEvent()) {
+			events.push_back(spt_down);
+			spt_down = sps_down->next();
+		}
 		while (!upStack.empty() && !downStack.empty()) {
 			if (!spt_up->isSequence() && !spt_down->isSequence()) {
 				#ifdef DEBUG
@@ -852,13 +855,13 @@ Sequence::sp_sequence TracesParser::mergeSequences(Sequence::sp_sequence sps_up,
 				#endif
 				next_up = true;
 				next_down = true;
-				sps->addTrace(spt_up);
-				dynamic_cast<Call*>(spt_up.get())->filterCall(dynamic_cast<const Call*>(spt_down.get()));
 				if (!events.empty()) {
 					for (unsigned int i = 0; i < events.size(); i++)
 						sps->addTrace(events.at(i));
 					events.clear();
 				}
+				sps->addTrace(spt_up);
+				dynamic_cast<Call*>(spt_up.get())->filterCall(dynamic_cast<const Call*>(spt_down.get()));
 			}
 			else {
 				if (spt_up->isSequence())
@@ -942,14 +945,18 @@ Sequence::sp_sequence TracesParser::mergeSequences(Sequence::sp_sequence sps_up,
 			}
 			if (next_up && !upStack.empty()) {
 				spt_up = sps_up->next();
-				while (!sps_up->isEndReached() && sps_up->at(sps_up->getPt())->isEvent())
-					events.push_back(sps_up->next());
+				while (!sps_up->isEndReached() && spt_up->isEvent()) {
+					events.push_back(spt_up);
+					spt_up = sps_up->next();
+				}
 				next_up = false;
 			}
 			if (next_down && !downStack.empty()) {
 				spt_down = sps_down->next();
-				while (!sps_down->isEndReached() && sps_down->at(sps_down->getPt())->isEvent())
-					events.push_back(sps_down->next());
+				while (!sps_down->isEndReached() && spt_down->isEvent()) {
+					events.push_back(spt_down);
+					spt_down = sps_down->next();
+				}
 				next_down = false;
 			}
 			#ifdef DEBUG
@@ -1283,6 +1290,10 @@ void TracesParser::exportTraceToXml() {
 
 void TracesParser::setEnd() {
 	end = true;
+}
+
+bool TracesParser::getEnd() const {
+	return end;
 }
 
 bool TracesParser::compressionDone() {

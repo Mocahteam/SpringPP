@@ -28,6 +28,11 @@
 #include "EventDef.h"
 #include "Sequence.h"
 
+/**
+  * Doit être mis à 1 pour prendre en compte les événements de Event::concatEventsArr rencontrés lors du parsage de fichier de traces brutes
+  */
+#define INCLUDE_EVENTS 0
+
 /** 
  * \class TracesParser
  
@@ -59,6 +64,7 @@ public:
 	void initParamsMap(const std::string& json);
 	void display(std::ostream &os = std::cout);
 	void setEnd();
+	bool getEnd() const;
 	bool compressionDone();
 	void setProceed(bool proceed);
 	bool getProceed();

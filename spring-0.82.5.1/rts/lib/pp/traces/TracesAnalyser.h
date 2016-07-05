@@ -1,3 +1,10 @@
+/**
+ * \file TracesAnalyser.h
+ * \brief Déclaration de la classe TracesAnalyser, de la structure Feedback et de la structure GameInfos.
+ * \author meresse
+ * \version 0.1
+ */
+
 #ifndef __TRACES_ANALYSER_H__
 #define __TRACES_ANALYSER_H__
 
@@ -22,22 +29,67 @@
 #include "Event.h"
 #include "EventDef.h"
 
-#define USELESS_FREQ 0					// threshold value in [0,1] used to determine if we have to make a USELESS_CALL feedback
-#define USEFUL_FREQ 1					// threshold value in [0,1] used to determine if we have to make a USEFUL_CALL feedback
-#define DIST_SEQ_NUM_THRES 0.5 			// threshold value in [0,1] used to determine if we have to make a SEQ_NUM feedback
-#define NUM_DOWNGRADS 2		 			// this value is used to determine the number of priority downgrads accepted
-#define SEQ_LACK_INFO_RATIO 1			// the proportion in [0,1] of labels given to the player for SEQ_LACK feedbacks
-#define NUM_CALL_APPEARS_THRES 2		// if the number of appearances of a call is less than this value in the trace, we can keep the associated CALL_EXTRA/CALL_LACK feedbacks
-#define IND_SEQ_NUM_CONST 4				// this value in [1,inf] is used to set the range of the bonus added to the similarity score in the case of the alignment of two sequences
+/**
+  * valeur comprise dans l'intervalle [0,1] utilisée pour déterminer si l'on doit créer un feedback de type TracesAnalyser::FeedbackType::USELESS_CALL
+  */
+#define USELESS_FREQ 0
 
-// scores used for alignment
-#define ALIGN_MATCH_SCORE 1
+/**
+  * Valeur comprise dans l'intervalle [0,1] utilisée pour déterminer si l'on doit créer un feedback de type TracesAnalyser::FeedbackType::USEFUL_CALL
+  */
+#define USEFUL_FREQ 1
+
+/**
+  * Valeur comprise dans l'intervalle [0,1] utilisée pour déterminer si l'on doit créer un feedback de type TracesAnalyser::FeedbackType::DIST_SEQ_NUM
+  */
+#define DIST_SEQ_NUM_THRES 0.5
+
+/**
+  * Nombre maximal de feedbacks retournés au joueur
+  */
+#define NUM_MAX_FEEDBACKS 3
+
+/**
+  * Valeur utilisée pour calculer le nombre de dégradations de priorité autorisées.
+  *
+  * Exemple :
+  * 	- un feedback avec une priorité à 0
+  *	    - un feedback avec une priorité à 1
+  *		- le nombre de dégradations autorisé est à 0
+  *		
+  *		On ne retourne que le premier feedback.
+  */
+#define NUM_DOWNGRADS 2
+
+/**
+  * Valeur comprise dans l'intervalle [0,1] correspondant au pourcentage de labels à afficher au joueur dans le cas d'un feedback de type TracesAnalyser::FeedbackType::SEQ_LACK.
+  *
+  * Si la valeur est à 1, on affichera donc l'ensemble des labels des appels utilisés dans la séquence.   
+  */
+#define SEQ_LACK_INFO_RATIO 1
+
+/**
+  * Cette valeur comprise dans l'intervalle [1,+inf] est utilisée pour définir l'intervalle de définition du bonus ajouté au score de similarité dans le cas de la tentative d'alignement entre deux séquences.
+  */
+#define IND_SEQ_NUM_CONST 4
+
+//#define ALIGN_MATCH_SCORE 1
+/**
+  * Score utilisé pour l'alignement. Correspond au pire score possible pour l'alignement. Les deux traces comparées ne seront jamais alignées.
+  */
 #define ALIGN_MISMATCH_SCORE -1
+/**
+  * Score utilisé pour l'alignement. Correpond au score obtenu si on aligne la trace avec rien (introduction d'un trou).
+  */
 #define ALIGN_GAP_SCORE 0
 
-// macro for change score range from [0,1] to [INF,SUP]
 #define INF -1
 #define SUP 1
+
+// macro for change score range from [0,1] to [INF,SUP]
+/**
+  * Macro utilisée pour changer l'intervalle de définition du score de [0,1] à [TracesAnalyser::INF,TracesAnalyser::SUP].
+  */
 #define TRANSFORM_SCORE(val) ((SUP - INF) * val + INF)
 
 class TracesAnalyser {
@@ -48,10 +100,25 @@ public:
 
 	enum FeedbackType {
 		NONE = -1,
-		USEFUL_CALL, 			// most experts have used this call but the player hasn't
-		USELESS_CALL, 			// the player has used this call but only a few expert has used it
-		SEQ_EXTRA, 				// the player has a sequence than the chosen expert hasn't
-		SEQ_LACK, 				// the chosen expert has a sequence than the player hasn't
+		/**
+		  * La plupart des experts ont utilisé cet appel mais pas le joueur. Paramétrable avec TracesAnalyser::USEFUL_FREQ.
+		  */
+		USEFUL_CALL,
+		/**
+		  * le joueur a utilisé cet appel mais très peu d'experts l'ont utilisé. Paramétrable avec TracesAnalyser::USELESS_FREQ.
+		  */
+		USELESS_CALL,
+		/**
+		  * Une séquence non présente dans les traces de l'expert est présente dans les traces du joueur.
+		  */
+		SEQ_EXTRA,
+		/**
+		  * Une séquence non présente dans les traces du joueur est présente dans les traces de l'expert.
+		  */
+		SEQ_LACK,
+		/**
+		  * L'attribut de la séquence experte Sequence::num_fixed est à true, elle est alignée avec une séquence présente dans les traces du joueur, les deux séquences se trouvent sous la racine, et les indices des deux séquences diffèrent. 
+		  */
 		IND_SEQ_NUM,			// the level of the aligned sequences is 0 and their indexes are not the same
 		DIST_SEQ_NUM,   		// notable difference between the indexes of the aligned sequences
 		CALL_EXTRA,				// the player has a call than the chosen expert hasn't
@@ -76,18 +143,18 @@ public:
 		FeedbackType type;
 		
 		/**
-		  * Chaîne de caractères contenant le texte associé au feedback. Défini par la balise <info> dans un fichier XML de définition de feedbacks.
-		  *	A noter que la balise <infos lang="..."> doit contenir au moins une balise <info> pour la langue choisie. 
+		  * Chaîne de caractères contenant le texte associé au feedback. Défini par la balise \<info\> dans un fichier XML de définition de feedbacks.
+		  *	A noter que la balise \<infos lang="..."\> doit contenir au moins une balise \<info\> pour la langue choisie. 
 		  */
 		std::string info;
 		
 		/**
-		  * Trace de l'apprenant pour ce feedback. Défini par la balise <learner> dans un fichier XML de définition de feedbacks.
+		  * Trace de l'apprenant pour ce feedback. Défini par la balise \<learner\> dans un fichier XML de définition de feedbacks.
 		  */
 		Trace::sp_trace learner_spt;
 		
 		/**
-		  * Trace de l'expert défini pour ce feedback. Défini par la balise <expert> dans un fichier XML de définition de feedbacks.
+		  * Trace de l'expert défini pour ce feedback. Défini par la balise \<expert\> dans un fichier XML de définition de feedbacks.
 		  */
 		Trace::sp_trace expert_spt;
 		/**
@@ -95,8 +162,7 @@ public:
 		  */
 		int priority;
 		/**
-		 * Variable prenant la valeur de l'attribut 'level' associé à la balise <feedback> dans le fichier XML de définition de feedbacks. Cet attribut est optionnel. S'il n'est pas défini,
-		 * cette variable prend la valeur -1 et ne sera pas utilisée lors de l'analyse. Dans le cas, où il est défini, sa valeur est utilisée pour associer un niveau aux traces \p learner_spt et \p expert_spt.
+		 * Variable prenant la valeur de l'attribut 'level' associé à la balise \<feedback\> dans le fichier XML de définition de feedbacks. Cet attribut est optionnel. S'il n'est pas défini, cette variable prend la valeur -1 et ne sera pas utilisée lors de l'analyse. Dans le cas, où il est défini, sa valeur est utilisée pour associer un niveau aux traces \p learner_spt et \p expert_spt.
 		 */
 		int level;
 		/**
@@ -108,18 +174,18 @@ public:
 			return priority < f.priority || (learner_spt && f.learner_spt && learner_spt->getLevel() < f.learner_spt->getLevel()) || (expert_spt && f.expert_spt && expert_spt->getLevel() < f.expert_spt->getLevel()) || (defined && !f.defined);
 		}
 		
-		void display() {
-			std::cout << "feedback : " << info << std::endl;
-			std::cout << "type : " << std::string(Call::getEnumLabel<FeedbackType>(type,feedbackTypesArr)) << std::endl;
+		void display(std::ostream &os = std::cout) {
+			os << "feedback : " << info << std::endl;
+			os << "type : " << std::string(Call::getEnumLabel<FeedbackType>(type,feedbackTypesArr)) << std::endl;
 			if (learner_spt) {
-				std::cout << "learner : " << std::endl;
-				learner_spt->display();
+				os << "learner : " << std::endl;
+				learner_spt->display(os);
 			}
 			if (expert_spt) {
-				std::cout << "expert : " << std::endl;
-				expert_spt->display();
+				os << "expert : " << std::endl;
+				expert_spt->display(os);
 			}
-			std::cout << "priority : " << priority << std::endl;
+			os << "priority : " << priority << std::endl;
 		}
 
 	};
@@ -218,6 +284,8 @@ public:
 	
 	static int getRandomIntInRange(int min, int max);
 	static bool feedbackTypeIn(FeedbackType type, int n, ...);
+	static bool isExpertRelatedFeedback(FeedbackType type);
+	static bool isLearnerRelatedFeedback(FeedbackType type);
 	
 private:
 
@@ -248,7 +316,7 @@ private:
 	void bindFeedbacks();
 	bool feedbackSequencesMatch(const Sequence::sp_sequence& sps, const Sequence::sp_sequence& ref_sps) const;
 	double getFeedbackScore(const Feedback& f, int j);
-	void filterFeedbacks();
+	void filterFeedbacks(std::ostream &os = std::cout);
 	void setFeedbackInfo(Feedback &f, Feedback &ref_f) const;
 	path constructAlignmentPath(const std::vector<Trace::sp_trace>& l, const std::vector<Trace::sp_trace>& e) const;
 	int getFeedbackIndex(const Trace::sp_trace& t, FeedbackType type = NONE) const;
