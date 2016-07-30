@@ -1,3 +1,10 @@
+/**
+ * \file CallDef.h
+ * \brief Déclaration des classes dérivées de la classe Call
+ * \author meresse
+ * \version 0.1
+ */
+
 #ifndef __CALL_DEF_H__
 #define __CALL_DEF_H__
 

@@ -1,9 +1,5 @@
 #include "TracesParser.h"
 
-#define MIN_SEQ_SIZE 1
-#define MAX_SEQ_SIZE 100000
-#define MAX_END_SEARCH 10
-
 #define DEBUG_
 #define LOG_IN_FILE
 
@@ -21,7 +17,7 @@ Trace::sp_trace TracesParser::spe_eme;
 	#endif
 #endif
 
-TracesParser::TracesParser(bool in_game): in_game(in_game), used(false), compressed(false), end(false), proceed(false), start(0), pt(0) {
+TracesParser::TracesParser(bool in_game): in_game(in_game), used(false), compressed(false), end(false), proceed(false), start(0) {
 	
 }
 
@@ -34,26 +30,28 @@ bool TracesParser::beginParse(const std::string& dir_path, const std::string& fi
 		std::cout << "parsing of traces file already launched" << std::endl;
 		return false;
 	}
-	if (!traces.empty())
-		traces.clear();
-	this->dir_path = dir_path;
-	this->filename = filename;
-	std::string s = dir_path + "\\" + filename;
-	if (!ifs.is_open()) {
-		if (filename.find(".log") == std::string::npos) {
-			std::cout << "not a log file" << std::endl;
-			return false;
-		}
-		ifs.open(s.c_str(), std::ios::in | std::ios::binary);
+	if (filename.find(".log") == std::string::npos) {
+		std::cout << "not a log file" << std::endl;
+		return false;
 	}
-	if (ifs.good())
+	std::string s = dir_path + "\\" + filename;
+	if (ifs.is_open())
+		ifs.close();
+	ifs.open(s.c_str(), std::ios::in | std::ios::binary);
+	if (ifs.good()) {
+		if (!traces.empty())
+			traces.clear();
+		this->dir_path = dir_path;
+		this->filename = filename;
 		used = true;
+	}
 	else
 		std::cout << "error opening file : " << strerror(errno) << std::endl;
 	return used;
 }
 
 void TracesParser::endParse() {
+	lineNum = 0;
 	start = 0;
 	used = false;
 	end = false;
@@ -69,9 +67,7 @@ void TracesParser::endParse() {
 	#endif
 }
 
-void TracesParser::writeFiles(bool online) {
-	if (online)
-		removeRedundancies(traces);
+void TracesParser::writeFiles() {
 	display();
 	std::string s = "\\" + filename;
 	s.replace(s.find(".log"), 4, "_compressed.txt");
@@ -90,23 +86,6 @@ void TracesParser::initParamsMap(const std::string& json) {
 }
 
 /* 
- * Starts the parsing of the traces file 'filename' which is located in 'dir_path' with online algorithm
- *
- * online: true if the parsing has to be done while the file is written (during the game), false otherwise (the file is already filled).
- */
-void TracesParser::parseTraceFileOnline(const std::string& dir_path, const std::string& filename) {
-	if (beginParse(dir_path,filename)) {
-		if (in_game && reachLastStart())
-			readTracesOnlineInGame();
-		else {
-			readTracesOnline();
-			writeFiles(true);
-		}
-		endParse();
-	}
-}
-
-/* 
  * Starts the parsing of the traces file 'filename' which is located in 'dir_path' with offline algorithm (the file have to be already filled with the traces).
  *
  */
@@ -116,23 +95,19 @@ void TracesParser::parseTraceFileOffline(const std::string& dir_path, const std:
 			readTracesOfflineInGame();
 		else {
 			readTracesOffline();
-			writeFiles(false);
+			writeFiles();
 		}
 		endParse();
 	}
 }
 
-/*
- * Parse the file 'filename' which is located in 'dir_path' without compression.
- *
- */
 void TracesParser::parseTraceFile(const std::string& dir_path, const std::string& filename) {
 	if (beginParse(dir_path,filename)) {
 		std::string line;
 		Event *e = NULL;
 		while (std::getline(ifs, line)) {
 			lineNum++;
-			// std::cout << "line : " << lineNum << std::endl;
+			std::cout << "line : " << lineNum << std::endl;
 			Trace::sp_trace spt = handleLine(line);
 			if (spt) {
 				e = (spt->isEvent()) ? dynamic_cast<Event*>(spt.get()) : NULL;
@@ -153,46 +128,6 @@ void TracesParser::parseTraceFile(const std::string& dir_path, const std::string
 	}
 	exportTraceToXml();
 	endParse();
-}
-
-/*
- * Handles all traces contained in the file with the online algorithm.
- *
- */
-void TracesParser::readTracesOnline() {
-	std::string line;
-	while (std::getline(ifs, line)) {
-		lineNum++;
-		// std::cout << "line : " << lineNum << std::endl;
-		Trace::sp_trace spt = handleLine(line);
-		while (spt && !handleTraceOnline(spt));
-	}
-	ifs.clear();
-	Trace::sp_trace spt = boost::make_shared<Event>("eof");
-	while (!handleTraceOnline(spt));
-}
-
-/*
- * Reads traces in the file while the writing and handles these with the online algorithm.
- *
- */
-void TracesParser::readTracesOnlineInGame() {
-	std::string line;
-	while (!end) {
-		while (std::getline(ifs, line)) {
-			lineNum++;
-			// std::cout << "line : " << lineNum << std::endl;
-			Trace::sp_trace spt = handleLine(line);
-			while (spt && !handleTraceOnline(spt));
-		}
-		if (!ifs.eof())
-			end = true; // Ensure end of read was EOF.
-		else
-			Sleep(500);
-		ifs.clear();
-	}
-	Trace::sp_trace spt = boost::make_shared<Event>("eof");
-	while (!handleTraceOnline(spt));
 }
 
 /*
@@ -246,9 +181,8 @@ void TracesParser::readTracesOfflineInGame() {
 					detectSequences();
 					traces.push_back(spe);
 					start = traces.size();
-					if (spe->getLabel().compare("new_execution") == 0) {
+					if (spe->getLabel().compare("new_execution") == 0 || spe->getLabel().compare("start_mission") == 0)
 						change = true;
-					}
 				}
 				else
 					handleTraceOffline(spt);
@@ -266,7 +200,7 @@ void TracesParser::readTracesOfflineInGame() {
 				spe = boost::dynamic_pointer_cast<Event>(traces.back());
 			if (!spe || (spe->getLabel().compare("start_mission") != 0 && spe->getLabel().compare("new_execution") != 0)) {
 				detectSequences();
-				writeFiles(false); //inform ProgAndPlay.cpp the compression is done
+				writeFiles(); //inform ProgAndPlay.cpp the compression is done
 				change = false;
 			}
 		}
@@ -405,291 +339,6 @@ Trace::sp_trace TracesParser::handleLine(const std::string& s) {
 	}
 	Trace::sp_trace spt(t);
 	return spt;
-}
-
-bool TracesParser::doCheckOnline(Trace::sp_trace spt) {
-	cur_seq = seqStack.top();
-	if (pt < tracesSave.size()) {
-		#ifdef DEBUG
-			os << "compare with save call (pt : " << pt << ")" << std::endl;
-		#endif
-		spt = tracesSave.at(pt);
-	}
-	Trace::sp_trace spt_seq = cur_seq->next();
-	if (!spt->isSequence()) {
-		while (spt_seq->isSequence()) {
-			Sequence::sp_sequence sps_seq = boost::dynamic_pointer_cast<Sequence>(spt_seq);
-			seqStack.push(sps_seq);
-			cur_seq = sps_seq;
-			spt_seq = sps_seq->next();
-			Sequence::sp_sequence hist_sps;
-			histStack.push(hist_sps);
-		}
-	}
-	#ifdef DEBUG
-		os << "doCheck : " << std::endl;
-		spt->display(os);
-		os << std::endl;
-		spt_seq->display(os);
-		os << std::endl;
-		cur_seq->display(os);
-		os << std::endl;
-	#endif
-	return spt->operator==(spt_seq.get());
-}
-
-bool TracesParser::handleTraceOnline(const Trace::sp_trace& spt) {
-	#ifdef DEBUG
-		os << "seq stack size : " << seqStack.size() << std::endl;
-		os << "tracesSave : " << std::endl;
-		for (unsigned int i = 0; i < tracesSave.size(); i++)
-			tracesSave.at(i)->display(os);
-		os << "new call : ";
-		spt->display(os);
-		os << std::endl;
-	#endif
-	bool res = true;
-	Event *e = NULL;
-	if (spt->isEvent())
-		e = dynamic_cast<Event*>(spt.get());
-	if (e != NULL && seqStack.empty() && tracesSave.empty() && Trace::inArray(e->getLabel().c_str(), Event::noConcatEventsArr) > -1) {
-		if (e->getLabel().compare("end_execution") == 0)
-			traces.push_back(spt);
-		if (spe_eme && e->getLabel().compare("new_execution") != 0) {
-			traces.push_back(spe_eme);
-			spe_eme.reset();
-		}
-		if (e->getLabel().compare("end_execution") != 0 && e->getLabel().compare("eof") != 0)
-			traces.push_back(spt);
-		start = traces.size();
-		if (in_game)
-			writeFiles(true);
-	}
-	else if (!seqStack.empty()) {
-		if (doCheckOnline(spt)) {
-			#ifdef DEBUG
-				os << "match" << std::endl;
-			#endif
-			if (pt == tracesSave.size())
-				tracesSave.push_back(spt);
-			else
-				res = false;
-			pt++;
-			if (cur_seq->isEndReached()) {
-				if (seqStack.size() > 1)
-					findSequence();
-				else if (seqStack.size() == 1 && cur_seq->checkValid())
-					sequenceDetected();
-			}
-		}
-		else {
-			#ifdef DEBUG
-				os << "no match" << std::endl;
-			#endif
-			if (seqStack.size() > 1) {
-				if (!cur_seq->isValid()) {
-					#ifdef DEBUG
-						os << "no match && sequence not valid" << std::endl;
-					#endif
-					while(seqStack.size() > 1) {
-						cur_seq->reset();
-						seqStack.pop();
-						histStack.pop();
-						ind_start = 0;
-					}
-				}
-				else if (pt == tracesSave.size() && cur_seq->getPt() != 1) {
-					#ifdef DEBUG
-						os << "no match && change mod" << std::endl;
-					#endif
-					if (cur_seq->getPt() == 0)
-						pt -= cur_seq->size() - 1;
-					else
-						pt -= cur_seq->getPt() - 1;
-				}
-			}
-			cur_seq = seqStack.top();
-			cur_seq->reset();
-			seqStack.pop();
-			histStack.pop();
-			ind_start = 0;
-			if (seqStack.empty()) {
-				if (cur_seq->getNum() == 1) {
-					#ifdef DEBUG
-						os << "false sequence" << std::endl;
-					#endif
-					tracesSave.at(0)->endSearch++;
-				}
-				cur_seq->setValid(false);
-			}
-			else {
-				cur_seq = seqStack.top();
-				if (cur_seq->isEndReached()) {
-					if (seqStack.size() > 1)
-						findSequence();
-					else if (seqStack.size() == 1 && cur_seq->checkValid())
-						sequenceDetected();
-				}
-			}
-			res = false;
-		}
-	}
-	else {
-		if (tracesSave.empty()) {
-			tracesSave.push_back(spt);
-			#ifdef DEBUG
-				os << "search : use new call" << std::endl;
-			#endif
-		}
-		else {
-			res = false;
-			#ifdef DEBUG
-				os << "search : use save call" << std::endl;
-			#endif
-		}
-		Trace::sp_trace first_spt = tracesSave.at(0);
-		if (!searchSequence(first_spt)) {
-			traces.push_back(first_spt);
-			tracesSave.erase(tracesSave.begin());
-			#ifdef DEBUG
-				os << "no (more) possible sequence from this trace" << std::endl;
-			#endif
-		}
-	}
-	return res;
-}
-
-bool TracesParser::searchSequence(const Trace::sp_trace& spt) {
-	#ifdef DEBUG
-		os << "search sequence from : " << std::endl;
-		spt->display(os);
-	#endif
-	bool found = false;
-	if (spt->endSearch < MAX_END_SEARCH) {
-		if (spt->indSearch == -1)
-			spt->indSearch = traces.size();
-		spt->indSearch--;
-		while (!found && /*spt->lenSearch <= MAX_SEQ_SIZE &&*/ spt->indSearch >= start) {
-			if (spt->operator==(traces.at(spt->indSearch).get()) /*&& spt->lenSearch >= MIN_SEQ_SIZE*/)
-				found = true;
-			else {
-				spt->indSearch--;
-				spt->lenSearch++;
-			}
-		}
-		if (found) {
-			cur_seq = boost::make_shared<Sequence>(1);
-			unsigned int j = spt->indSearch;
-			while (j < traces.size())
-				cur_seq->addTrace(traces.at(j++));
-			// the sequence must contain at least two different types of traces
-			if (!cur_seq->isUniform()) {
-				#ifdef DEBUG
-					os << "potential sequence has been found : " << std::endl;
-					cur_seq->display(os);
-					os << std::endl;
-				#endif
-				seqStack.push(cur_seq);
-				Sequence::sp_sequence hist_sps;
-				histStack.push(hist_sps);
-				cur_seq->next();
-				pt = 1;
-				if (spt->isSequence())
-					boost::dynamic_pointer_cast<Sequence>(cur_seq->at(0))->setValid(true);
-			}
-			else {
-				#ifdef DEBUG
-					os << "uniform sequence" << std::endl;
-				#endif
-				spt->endSearch++;
-				return searchSequence(spt);
-			}
-		}
-	}
-	return found;
-}
-
-void TracesParser::sequenceDetected() {
-	cur_seq->addOne();
-	if (cur_seq->getNum() == 2) {
-		#ifdef DEBUG
-			os << "true sequence" << std::endl;
-		#endif
-		for (unsigned int i = 0; i < cur_seq->size(); i++)
-			traces.pop_back();
-		cur_seq->checkDelayed();
-		tracesSave.insert(tracesSave.begin(),cur_seq);
-	}
-	tracesSave.erase(tracesSave.begin() + 1, tracesSave.begin() + 1 + cur_seq->size());
-	pt = 1;
-	cur_seq->setValid(false);
-	#ifdef DEBUG
-		os << "num seq ++" << std::endl;
-	#endif
-}
-
-void TracesParser::findSequence() {
-	unsigned int i = 0, ind = 0, cpt = 0;
-	bool inSeq = false, valid = false;
-	if (histStack.top())
-		i = ind_start;
-	while(i < tracesSave.size()) {
-		Trace::sp_trace spt = cur_seq->at(ind);
-		if (spt->operator==(tracesSave.at(i).get())) {
-			if (!inSeq) {
-				ind_start = i;
-				inSeq = true;
-			}
-			if (++ind == cur_seq->size()) {
-				ind = 0;
-				if (++cpt == 2 || histStack.top()) {
-					valid = true;
-					compactHistory();
-				}
-			}
-			i++;
-		}
-		else if (inSeq) {
-			inSeq = false;
-			valid = false;
-			ind = 0;
-			cpt = 0;
-		}
-		else
-			i++;
-	}
-	if (!cur_seq->isValid() && valid) {
-		cur_seq->setValid(true);
-		#ifdef DEBUG
-			os << "sequence validated" << std::endl;
-		#endif
-	}
-}
-
-void TracesParser::compactHistory() {
-	unsigned int i;
-	Sequence::sp_sequence hist_sps;
-	if (!histStack.top()) {
-		#ifdef DEBUG
-			os << "compact history : create seq" << std::endl;
-		#endif
-		hist_sps = boost::make_shared<Sequence>(2);
-		for (i = ind_start; i < ind_start + cur_seq->size(); i++)
-			hist_sps->addTrace(tracesSave.at(i));
-		tracesSave.erase(tracesSave.begin() + ind_start, tracesSave.begin() + ind_start + 2 * hist_sps->size());
-		tracesSave.insert(tracesSave.begin() + ind_start, hist_sps);
-		ind_start++;
-		histStack.pop();
-		histStack.push(hist_sps);
-	}
-	else {
-		#ifdef DEBUG
-			os << "compact history : add one" << std::endl;
-		#endif
-		histStack.top()->addOne();
-		tracesSave.erase(tracesSave.begin() + ind_start, tracesSave.begin() + ind_start + histStack.top()->size());
-	}
-	pt = ind_start;
 }
 
 void TracesParser::detectSequences() {
@@ -940,7 +589,7 @@ Sequence::sp_sequence TracesParser::mergeSequences(Sequence::sp_sequence sps_up,
 				}
 				newStack.pop();
 				newStack.top()->addTrace(sps);
-				sps->completeNumMap(newStack.top());
+				sps->completeNumMap();
 				sps = newStack.top();
 			}
 			if (next_up && !upStack.empty()) {
@@ -1000,11 +649,6 @@ void TracesParser::handleTraceOffline(Trace::sp_trace& spt) {
 		traces.push_back(spt);
 }
 
-/*
- * Runs trough the file and sets the position of the next line to be extracted from the input stream.
- * 
- * Returns true if at least one 'start' label has been found, false otherwise.
- */
 bool TracesParser::reachLastStart() {
 	std::string line;
 	int pos = 0, start_pos = -1, cpt = 1;
@@ -1304,47 +948,12 @@ bool TracesParser::compressionDone() {
 	return false;
 }
 
-/**
- * This function is called by ProgAndPlay.cpp. 'proceed' is set to true when all units are idled or if the mission is ended and a certain amount of time has run.
- * 'proceed' is used to know when when the compression result must be write in files for analysis during the game.
- */
 void TracesParser::setProceed(bool proceed) {
 	this->proceed = proceed;
 }
 
 bool TracesParser::getProceed() {
 	return proceed;
-}
-
-const std::vector<Trace::sp_trace>& TracesParser::getTraces() const {
-	return traces;
-}
-
-void TracesParser::removeRedundancies(std::vector<Trace::sp_trace>& traces) {
-	int cpt;
-	Sequence::sp_sequence sps;
-	std::vector<Trace::sp_trace>::iterator it = traces.begin();
-	while (it != traces.end()) {
-		if ((*it)->isSequence()) {
-			sps = boost::dynamic_pointer_cast<Sequence>(*it);
-			removeRedundancies(sps->getTraces());
-		}
-		else if (!(*it)->isEvent() || Trace::inArray(boost::dynamic_pointer_cast<Event>(*it)->getLabel().c_str(), Event::noConcatEventsArr) == -1) {
-			std::vector<Trace::sp_trace>::iterator _it = it+1;
-			cpt = 1;
-			while (_it != traces.end() && (*it)->operator==((*_it).get())) {
-				cpt++;
-				_it++;
-			}
-			if (cpt > 1) {
-				sps = boost::make_shared<Sequence>(cpt);
-				sps->addTrace(*it);
-				traces.erase(it,_it);
-				it = traces.insert(it,sps);
-			}
-		}
-		it++;
-	}
 }
 
 std::vector<std::string> TracesParser::splitLine(const std::string& s, char delim) {

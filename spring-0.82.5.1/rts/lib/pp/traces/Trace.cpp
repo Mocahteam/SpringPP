@@ -81,17 +81,3 @@ int Trace::inArray(const char *ch, const char *arr[]) {
 	}
 	return -1;
 }
-
-Trace::sp_trace Trace::getNeighbour(const std::vector<Trace::sp_trace>& traces, const Trace::sp_trace& spt, int add_to_ind) {
-	Trace::sp_trace nbh;
-	int ind = -1;
-	for (unsigned int i = 0; i < traces.size(); i++) {
-		if (traces.at(i) == spt) {
-			ind = i;
-			break;
-		}
-	}
-	if (ind > -1 && ind + add_to_ind >= 0 && ind + add_to_ind < (int)traces.size())
-		nbh = traces.at(ind + add_to_ind);
-	return nbh;
-}

@@ -51,11 +51,9 @@ public:
 	static const char* noConcatEventsArr[];
 	
 	/**
-	  * \brief Récupération de la place occupée par un événement dans un vecteur de traces.
+	  * \brief Récupération de la longueur (l'espace occupé dans un vecteur de traces) d'un événement.
 	  *
-	  * Retourne 0.
-	  *
-	  * \return la taille définie pour un objet Event.
+	  * \return 0
 	  */
 	virtual unsigned int length() const;
 	
@@ -68,8 +66,18 @@ public:
 	  */
 	virtual bool operator==(Trace *t) const;
 	
+	/**
+	  * \brief Clonage d'un événement.
+	  *
+	  * \return une copie de l'objet Event.
+	  */
 	virtual Trace::sp_trace clone() const;
 	
+	/**
+	  * \brief Affichage des informations de l'objet Event.
+	  *
+	  * \param os le flux de sortie utilisé pour l'affichage.
+	  */
 	virtual void display(std::ostream &os = std::cout) const;
 	
 	/**

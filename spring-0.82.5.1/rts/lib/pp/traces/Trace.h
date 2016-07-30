@@ -22,6 +22,9 @@ class Trace {
 
 public:
 
+	/**
+	  * Définition du type pointeur intelligent vers un objet Trace.
+	  */
 	typedef boost::shared_ptr<Trace> sp_trace;
 
 	/**
@@ -72,8 +75,7 @@ public:
 	/**
 	  * \brief Affichage de la trace.
 	  *
-	  * \param os : le flux de sortie utilisée pour l'affichage.
-	  *
+	  * \param os : le flux de sortie utilisé pour l'affichage.
 	  */
 	virtual void display(std::ostream &os = std::cout) const = 0;
 	
@@ -97,13 +99,29 @@ public:
 	static int inArray(const char *ch, const char *arr[]);
 	
 	/**
-	  * Get the neighbours of 'spt' in 'traces' in the range [ind_spt - sub_to_ind, ind_spt + add_to_ind] where ind_spt is the index of 'spt' in 'traces'. 'spt' have to be included in traces.
+	  * Variable utilisée pour obtenir une indentation valide des traces lors de leur affichage.
 	  */
-	static sp_trace getNeighbour(const std::vector<sp_trace>& traces, const sp_trace& spt, int add_to_ind);
-	
 	static int numTab;
+	
+	/**
+	  * Indice de la trace dans TracesParser::traces sur laquelle est placé le curseur lors de la recherche de répétitions d'un groupe de traces à partir de la trace possédant cette variable.
+	  *
+	  * \see TracesParser::detectSequences
+	  */
 	int indSearch;
+	
+	/**
+	  * La somme des longueurs des traces contenues dans le vecteur TracesParser::traces et comprise entre la trace qui se trouve à la position Trace::indSearch (incluse) et celle possédant cette variable (excluse).
+	  *
+	  * \see TracesParser::detectSequences
+	  */
 	unsigned int lenSearch;
+	
+	/**
+	  * Compteur utilisé pour stopper et éviter toute future recherche de répétitions d'un groupe de traces à partir de la trace possédant cette variable lorsque sa valeur a atteint un certain seuil MAX_END_SEARCH défini dans le fichier TracesParser.h.
+	  *
+	  * \see TracesParser::detectSequences
+	  */
 	unsigned int endSearch;
 	
 	/**
@@ -128,12 +146,18 @@ public:
 	bool isCall() const;
 	
 	/**
-	  * \brief [deprecated]
+	  * \brief Getter pour la variable Trace::delayed.
+	  *
+	  * \see Trace::delayed
 	  */
 	bool isDelayed() const;
 	
 	/**
-	  * \brief [deprecated]
+	  * \brief Setter pour la variable Trace::delayed.
+	  *
+	  * La variable Trace::delayed est mise à vraie. 
+	  *
+	  * \see Trace::delayed
 	  */
 	void setDelayed();
 	
@@ -214,7 +238,7 @@ protected:
 	std::string info;
 	
 	/**
-	  * [deprecated] Un booléen mis à vrai lorsque la trace a été générée par le moteur alors que la mission était déjà terminée.
+	  * Un booléen mis à vrai lorsque la trace a été générée par le moteur alors que la mission était déjà terminée.
 	  */
 	bool delayed;
 	

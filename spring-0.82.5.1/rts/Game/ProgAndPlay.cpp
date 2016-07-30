@@ -123,14 +123,14 @@ CProgAndPlay::~CProgAndPlay() {
 void CProgAndPlay::Update(void) {
 	log("ProgAndPLay::Update begin");
 	
-	std::stringstream ss;
+	// std::stringstream ss;
 	
 	bool unitsIdled = allUnitsIdled();
 	logMessages(unitsIdled); // check if mission is ended, clean messages in shared memory and store log messages
 	
-	ss << "units idled : " << unitsIdled << std::endl;
-	log(ss.str());
-	ss.str("");
+	// ss << "units idled : " << unitsIdled << std::endl;
+	// log(ss.str());
+	// ss.str("");
 	
 	if (tracePlayer && !tp.getEnd()) {
 		if (!unitsIdled) {
@@ -147,27 +147,30 @@ void CProgAndPlay::Update(void) {
 		bool endlessLoop = endless_loop_frame_counter > UPDATE_RATE_MULTIPLIER * UNIT_SLOWUPDATE_RATE;
 		unitsIdled = units_idled_frame_counter > UPDATE_RATE_MULTIPLIER * UNIT_SLOWUPDATE_RATE;
 		
-		if (!tp.getProceed() && unitsIdled)
+		if (!tp.getProceed() && (unitsIdled || allUnitsDead()))
 			tp.setProceed(true);
 		
-		ss << "endless loop : " << endlessLoop << std::endl;
-		log(ss.str());
-		ss.str("");
-		ss << "units idled (counter) : " << unitsIdled << std::endl;
-		log(ss.str());
-		ss.str("");
-		ss << "endless_loop_frame_counter : " << endless_loop_frame_counter << std::endl;
-		log(ss.str());
-		ss.str("");
-		ss << "units_idled_frame_counter : " << units_idled_frame_counter << std::endl;
-		log(ss.str());
-		ss.str("");
-		ss << "mission_ended : " << missionEnded << std::endl;
-		log(ss.str());
-		ss.str("");
-		ss << "proceed : " << tp.getProceed() << std::endl;
-		log(ss.str());
-		ss.str("");
+		// ss << "endless loop : " << endlessLoop << std::endl;
+		// log(ss.str());
+		// ss.str("");
+		// ss << "units idled (counter) : " << unitsIdled << std::endl;
+		// log(ss.str());
+		// ss.str("");
+		// ss << "endless_loop_frame_counter : " << endless_loop_frame_counter << std::endl;
+		// log(ss.str());
+		// ss.str("");
+		// ss << "units_idled_frame_counter : " << units_idled_frame_counter << std::endl;
+		// log(ss.str());
+		// ss.str("");
+		// ss << "mission_ended : " << missionEnded << std::endl;
+		// log(ss.str());
+		// ss.str("");
+		// ss << "proceed : " << tp.getProceed() << std::endl;
+		// log(ss.str());
+		// ss.str("");
+		// ss << "all units dead : " << allUnitsDead() << std::endl;
+		// log(ss.str());
+		// ss.str("");
 
 		if (tp.compressionDone()) {
 			log("compression done");
@@ -181,9 +184,9 @@ void CProgAndPlay::Update(void) {
 				ppTraces.close();
 			}
 			
-			ss << "feedbacksWidgetEnabled : " << configHandler->GetString("Feedbacks Widget", "disabled") << std::endl;
-			log(ss.str());
-			ss.str("");
+			// ss << "feedbacksWidgetEnabled : " << configHandler->GetString("Feedbacks Widget", "disabled") << std::endl;
+			// log(ss.str());
+			// ss.str("");
 
 			const std::map<std::string,std::string>& modOpts = gameSetup->modOptions;
 			if ((modOpts.find("testmap") == modOpts.end() || modOpts.at("testmap").compare("0") == 0) && configHandler->GetString("Feedbacks Widget", "disabled").compare("enabled") == 0) {
@@ -733,6 +736,11 @@ bool CProgAndPlay::allUnitsIdled() {
 	return true;
 }
 
+bool CProgAndPlay::allUnitsDead() {
+	CUnitSet *tmp = &(teamHandler->Team(gu->myTeam)->units);
+	return tmp->size() == 0;
+}
+
 void CProgAndPlay::logMessages(bool unitsIdled) {
 	log("ProgAndPLay::logMessages begin");
 	int i = 0;
@@ -810,7 +818,7 @@ void CProgAndPlay::openTracesFile() {
 					log("default compression params will be used");
 					
 				if (modOpts.find("testmap") != modOpts.end() && modOpts.at("testmap").compare("0") == 0) {
-					log("feedbacks loading");
+					log("start feedbacks loading");
 					// feedbacks loading from XML for TracesAnalyser
 					const std::string feedbacks_xml = loadFile(springFeedbacksPath);
 					std::string mission_feedbacks_xml;
@@ -823,6 +831,7 @@ void CProgAndPlay::openTracesFile() {
 					}
 					if (feedbacks_xml.compare("") != 0)
 						ta.loadXmlInfos(feedbacks_xml,mission_feedbacks_xml);
+					log("end feedbacks loading");
 				}
 			}
 			else

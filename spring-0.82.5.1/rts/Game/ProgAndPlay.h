@@ -57,7 +57,8 @@ private:
 	int execPendingCommands(); // execute pending command from Prog&Play
 	void logMessages(bool unitsIdled); // log messages from Prog&Play
 	void openTracesFile(); // open the appropriate traces file based on the current mission
-	bool allUnitsIdled(); //returns true if all units' command queues are empty
+	bool allUnitsIdled(); // returns true if all units' command queues are empty (units of the player)
+	bool allUnitsDead(); // returns true if the player has no units left in the game
 	
 	const std::string loadFile(std::string full_path);
 	const std::string loadFileFromArchive(std::string full_path);

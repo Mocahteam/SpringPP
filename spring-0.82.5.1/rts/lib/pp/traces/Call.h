@@ -27,10 +27,6 @@
   */
 #define DEFAULT_COMPRESSION_MOD 0
 
-#define EDIT_MATCH_SCORE 0
-#define EDIT_MISMATCH_SCORE 1
-#define EDIT_GAP_SCORE 1
-
 /** 
  * \class ParamsMap
  * \brief Classe utilisée pour le chargement des paramètres de compression à partir du fichier JSON 'params.json'.
@@ -224,11 +220,9 @@ public:
 	}
 	
 	/**
-	  * \brief Récupération de la place occupée par un appel dans un vecteur de traces.
+	  * \brief Récupération de la longueur (l'espace occupé dans un vecteur de traces) d'un appel.
 	  *
-	  * Retourne 1.
-	  *
-	  * \return la taille définie pour un objet Call.
+	  * \return 1
 	  */
 	virtual unsigned int length() const;
 	
@@ -251,8 +245,18 @@ public:
 	  */
 	virtual void filterCall(const Call *c);
 	
+	/**
+	  * \brief Affichage des informations de l'objet Call.
+	  *
+	  * \param os le flux de sortie utilisé pour l'affichage.
+	  */
 	virtual void display(std::ostream &os = std::cout) const;
 	
+	/**
+	  * \brief Clonage d'un appel.
+	  *
+	  * \return une copie de l'objet Call.
+	  */
 	virtual Trace::sp_trace clone() const = 0;
 	
 	/**
