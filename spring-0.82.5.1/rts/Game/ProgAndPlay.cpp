@@ -198,7 +198,7 @@ void CProgAndPlay::Update(void) {
 				if (archiveLoaded) {
 					std::vector<std::string> files = vfsHandler->GetFilesInDir(archiveExpertPath + missionName);
 					for (unsigned int i = 0; i < files.size(); i++) {
-						if (files.at(i).find(".xml") != std::string::npos)
+						if (files.at(i).find(".xml") != std::string::npos && files.at(i).compare("feedbacks.xml") != 0)
 							experts_xml.push_back(loadFileFromArchive(archiveExpertPath + missionName + "\\" + files.at(i)));
 					}
 				}
@@ -723,6 +723,8 @@ log("ProgAndPLay::execPendingCommands end");
 
 bool CProgAndPlay::allUnitsIdled() {
 	CUnitSet *tmp = &(teamHandler->Team(gu->myTeam)->units);
+	if (tmp->size() == 0)
+		return false;
 	CUnitSet::iterator it = tmp->begin();
 	while (it != tmp->end()) {
 		const CCommandAI* commandAI = (*it)->commandAI;

@@ -6,11 +6,10 @@ Sequence::Sequence(unsigned int num, bool root) : Trace(SEQUENCE), num_fixed(fal
 	updateNumMap(num);
 }
 
-Sequence::Sequence(const_sp_sequence sps) : Trace(sps.get()), pt(0), endReached(false) {
+Sequence::Sequence(const_sp_sequence sps) : Trace(sps.get()), pt(0), endReached(false), shared(false) {
 	num = sps->getNum();
 	num_fixed = sps->hasNumberIterationFixed();
 	root = sps->isRoot();
-	shared = sps->isShared();
 	updateNumMap(sps->getNumMap());
 }
 
@@ -309,36 +308,38 @@ Sequence::sequence_vector Sequence::getSequences() {
  */
 Call::call_vector Sequence::getCalls(bool setMod) {
 	Call::call_vector v;
-	Trace::sp_trace spt;
 	Sequence::sp_sequence sps = shared_from_this();
-	sps->reset();
-	std::stack<Sequence::sp_sequence> stack;
-	stack.push(sps);
-	while(!stack.empty()) {
-		while (!stack.empty() && sps->isEndReached()) {
-			stack.pop();
-			if (!stack.empty())
-				sps = stack.top();
-		}
-		if (!sps->isEndReached()) {
-			spt = sps->next();
-			if (spt->isSequence()) {
-				sps = boost::dynamic_pointer_cast<Sequence>(spt);
-				sps->reset();
-				stack.push(sps);
+	if (sps->length() > 0) {
+		Trace::sp_trace spt;
+		sps->reset();
+		std::stack<Sequence::sp_sequence> stack;
+		stack.push(sps);
+		while(!stack.empty()) {
+			while (!stack.empty() && sps->isEndReached()) {
+				stack.pop();
+				if (!stack.empty())
+					sps = stack.top();
 			}
-			else if (spt->isCall()) {
-				Call::sp_call spc = boost::dynamic_pointer_cast<Call>(spt);
-				if (!setMod)
-					v.push_back(spc);
-				else {
-					bool found = false;
-					for (unsigned int j = 0; !found && j < v.size(); j++) {
-						if (v.at(j)->getLabel().compare(spc->getLabel()) == 0)
-							found = true;
-					}
-					if (!found)
+			if (!sps->isEndReached()) {
+				spt = sps->next();
+				if (spt->isSequence()) {
+					sps = boost::dynamic_pointer_cast<Sequence>(spt);
+					sps->reset();
+					stack.push(sps);
+				}
+				else if (spt->isCall()) {
+					Call::sp_call spc = boost::dynamic_pointer_cast<Call>(spt);
+					if (!setMod)
 						v.push_back(spc);
+					else {
+						bool found = false;
+						for (unsigned int j = 0; !found && j < v.size(); j++) {
+							if (v.at(j)->getLabel().compare(spc->getLabel()) == 0)
+								found = true;
+						}
+						if (!found)
+							v.push_back(spc);
+					}
 				}
 			}
 		}

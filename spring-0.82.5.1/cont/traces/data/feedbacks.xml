@@ -117,10 +117,10 @@
 		</message>
 		<message id="return">
 			<infos lang="fr">
-				<info>La valeur retournée par l'instruction *learner_call* n'est pas correcte.</info>
+				<info>La valeur retournée par la fonction ne semble pas être correcte.</info>
 			</infos>
 			<infos lang="en">
-				<info>The value returned by the instruction *learner_call* is not correct.</info>
+				<info>The value returned by the function doesn't seem to be correct.</info>
 			</infos>
 		</message>
 		<message id="specialAreaId">

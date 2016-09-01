@@ -81,3 +81,16 @@ int Trace::inArray(const char *ch, const char *arr[]) {
 	}
 	return -1;
 }
+
+unsigned int Trace::getLength(const std::vector<Trace::sp_trace>& traces, int ind_start, int ind_end) {
+	if (ind_start == -1)
+		ind_start = 0;
+	if (ind_end == -1)
+		ind_end = traces.size();
+	if (ind_start < ind_end && (ind_start < 0 || ind_start >= (int)traces.size()))
+		throw std::runtime_error("invalid index used in getLength() function");
+	unsigned int len = 0;
+	for (int i = ind_start; i < ind_end; i++)
+		len += traces.at(i)->length();
+	return len;
+}

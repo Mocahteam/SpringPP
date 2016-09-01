@@ -687,7 +687,7 @@ private:
 	/**
 	  * \brief Filtrage des feedbacks listés
 	  *
-	  * Cette fonction contient plusieurs filtres permettant d'éliminer feedbacks redondants ou non pertinents pour le retour qui sera donné au joueur.
+	  * Cette fonction contient plusieurs filtres permettant d'éliminer les feedbacks redondants ou non pertinents pour le retour qui sera donné au joueur.
 	  *
 	  * \param os le flux de sortie utilisé pour l'affichage.
 	  */

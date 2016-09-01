@@ -8,6 +8,7 @@
 #ifndef __TRACE_H__
 #define __TRACE_H__
 
+#include <stdexcept>
 #include <vector>
 #include <iostream>
 #include <string.h>
@@ -97,6 +98,17 @@ public:
 	  * \return -1 si \p ch n'est pas présent dans \p arr, et l'indice de sa position dans \p arr sinon.
 	  */
 	static int inArray(const char *ch, const char *arr[]);
+	
+	/**
+	  * \brief Récupération de la longueur du sous-vecteur [ind_start,ind_end[ du vecteur \p traces.
+	  *
+	  * \param traces : le vecteur contenant les traces.
+	  * \param ind_start : l'indice du début du sous-vecteur dans \p traces. Sa valeur par défaut est 0.
+	  * \param ind_end : l'indice de fin du sous-vecteur dans \p traces. Sa valeur par défaut est traces.size().
+	  *
+	  * \return la longueur du sous-vecteur calculée.	  
+	  */
+	static unsigned int getLength(const std::vector<sp_trace>& traces, int ind_start = -1, int ind_end = -1);
 	
 	/**
 	  * Variable utilisée pour obtenir une indentation valide des traces lors de leur affichage.

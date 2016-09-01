@@ -363,7 +363,7 @@ public:
 	/**
 	  * \brief Calcul de la distance entre deux objets Sequence::numMap.
 	  *
-	  * La distance entre deux objets Sequence::numMap est calculée avec la formule suivante : abs(sl - se) / (sl + se) où 'sl' est la somme des produits x*y pour toute entrée <x:y> de l'objet Sequence::numMap de la séquence et 'se' est la somme des produits x*y pour toute entrée <x:y> de l'objet Sequence::numMap de \p sps. 
+	  * La distance entre deux objets Sequence::numMap est calculée avec la formule suivante : abs(sl - se) / (sl + se) où 'sl' est la somme des produits x*y pour toute entrée <x:y> de l'objet Sequence::numMap de la séquence et 'se' est la somme des produits x*y pour toute entrée <x:y> de l'objet Sequence::numMap de \p sps.
 	  *
 	  * \return la distance calculée.
 	  */

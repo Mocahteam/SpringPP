@@ -342,12 +342,12 @@ Trace::sp_trace TracesParser::handleLine(const std::string& s) {
 }
 
 void TracesParser::detectSequences() {
-	unsigned int i, j, seq_start, seq_end, max_size = 2;
+	unsigned int i, j, seq_start, seq_end, max_length = 2;
     bool found, climb = false;
 	Sequence::sp_sequence sps_up, sps_down, sps_res;
-	while(max_size < traces.size() - start) {
+	while(max_length <= Trace::getLength(traces,start) / 2) {
 		#ifdef DEBUG
-			os << "max size : " << max_size << std::endl;
+			os << "max size : " << max_length << std::endl;
 		#endif
 		i = start;
 		seq_end = start;
@@ -365,7 +365,7 @@ void TracesParser::detectSequences() {
 				traces.at(i)->display(os);
 				os << std::endl;
 			#endif
-			while (i < traces.size() && traces.at(i)->lenSearch <= max_size && traces.at(i)->indSearch >= (int)seq_end && traces.at(i)->endSearch < MAX_END_SEARCH) {
+			while (i < traces.size() && traces.at(i)->lenSearch <= max_length && traces.at(i)->indSearch >= (int)seq_end && traces.at(i)->endSearch < MAX_END_SEARCH) {
 				if (traces.at(i)->lenSearch >= 2) {
 					sps_up = boost::make_shared<Sequence>(1);
 					seq_start = traces.at(i)->indSearch;
@@ -408,7 +408,8 @@ void TracesParser::detectSequences() {
 							std::vector<Trace::sp_trace>::iterator it = traces.begin() + seq_end;
 							while(it != traces.end())
 								(*it++)->indSearch = -1;
-							i = seq_start + max_size;
+							i = seq_start + max_length;
+							// i = seq_start + max_length + 1
 							#ifdef DEBUG
 								os << "seq_end : " << seq_end << std::endl;
 								os << "i : " << i << std::endl;
@@ -444,7 +445,7 @@ void TracesParser::detectSequences() {
 			}
 			i++;
 		}
-		max_size++;
+		max_length++;
 	}
 }
 

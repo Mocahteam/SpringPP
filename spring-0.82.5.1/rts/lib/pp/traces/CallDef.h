@@ -650,9 +650,11 @@ private:
 			sc++;
 		if (action != cc->action)
 			sc++;
-		if (pos != cc->pos)
+		if (pos.x != cc->pos.x)
 			sc++;
-		return std::make_pair<int,int>(sc,3);
+		if (pos.y != cc->pos.y)
+			sc++;
+		return std::make_pair<int,int>(sc,4);
 	}
 	
 	virtual std::string getParams() const {
