@@ -83,8 +83,6 @@ int Trace::inArray(const char *ch, const char *arr[]) {
 }
 
 unsigned int Trace::getLength(const std::vector<Trace::sp_trace>& traces, int ind_start, int ind_end) {
-	if (ind_start == -1)
-		ind_start = 0;
 	if (ind_end == -1)
 		ind_end = traces.size();
 	if (ind_start < ind_end && (ind_start < 0 || ind_start >= (int)traces.size()))

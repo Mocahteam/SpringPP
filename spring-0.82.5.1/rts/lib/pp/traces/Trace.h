@@ -108,7 +108,7 @@ public:
 	  *
 	  * \return la longueur du sous-vecteur calculée.	  
 	  */
-	static unsigned int getLength(const std::vector<sp_trace>& traces, int ind_start = -1, int ind_end = -1);
+	static unsigned int getLength(const std::vector<sp_trace>& traces, int ind_start = 0, int ind_end = -1);
 	
 	/**
 	  * Variable utilisée pour obtenir une indentation valide des traces lors de leur affichage.
