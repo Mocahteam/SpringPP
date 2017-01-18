@@ -26,7 +26,7 @@ namespace CallMisc {
 	struct Unit {
 		int id;
 		int type;
-		
+
 		bool operator!=(const Unit& u) const {
 			return id != u.id;
 		}
@@ -35,7 +35,7 @@ namespace CallMisc {
 	struct Position {
 		float x;
 		float y;
-		
+
 		bool operator!=(const Position& p) const {
 			return x != p.x || y != p.y;
 		}
@@ -43,612 +43,866 @@ namespace CallMisc {
 
 }
 
-class NoParamCall : public Call {
-	
+class CallWithNoParam : public Call {
+
 public:
-		
-	NoParamCall(std::string label): Call(label,Call::NONE) {}
-	
-	NoParamCall(const NoParamCall *c) : Call(c) {}
-	
+
+	CallWithNoParam(std::string key): Call(key,Call::NONE) {}
+
+	CallWithNoParam(const CallWithNoParam *c) : Call(c) {}
+
 	virtual Trace::sp_trace clone() const {
-		return boost::make_shared<NoParamCall>(this);
+		return boost::make_shared<CallWithNoParam>(this);
 	}
-	
+
 private:
 
 	virtual bool compare(const Call *c) const {
 		return true;
 	}
-	
+
 	virtual void filter(const Call *c) {}
-	
+
 	virtual std::pair<int,int> distance(const Call *c) const {
 		return std::make_pair<int,int>(0,0);
 	}
-	
+
 	virtual std::string getParams() const {
 		return "";
 	}
-	
+
 	virtual std::string getReadableParams() const {
 		return "";
 	}
-	
+
 	virtual std::vector<std::string> id_wrong_params(Call *c) const {
 		std::vector<std::string> ids;
 		return ids;
 	}
-	
+
 };
 
-class GetSpecialAreaPositionCall : public Call {
+class CallWithIntParam : public Call {
 
 public:
 
-	GetSpecialAreaPositionCall(ErrorType error, int specialAreaId): Call("PP_GetSpecialAreaPosition",error), specialAreaId(specialAreaId) {}
-	
-	GetSpecialAreaPositionCall(const GetSpecialAreaPositionCall *c) : Call(c) {
-		specialAreaId = c->specialAreaId;
+	CallWithIntParam(ErrorType error, std::string key, int param): Call(key,error), param(param) {}
+
+	CallWithIntParam(const CallWithIntParam *c) : Call(c) {
+		param = c->param;
 	}
-	
+
 	virtual Trace::sp_trace clone() const {
-		return boost::make_shared<GetSpecialAreaPositionCall>(this);
+		return boost::make_shared<CallWithIntParam>(this);
 	}
-	
+
 private:
-	
-	int specialAreaId;
-	
+
+	int param;
+
 	virtual bool compare(const Call *c) const {
-		const GetSpecialAreaPositionCall *cc = dynamic_cast<const GetSpecialAreaPositionCall*>(c);
-		if (Call::paramsMap.contains(label,"specialAreaId") && specialAreaId != cc->specialAreaId)
+		const CallWithIntParam *cc = dynamic_cast<const CallWithIntParam*>(c);
+		if ((Call::callMaps.contains(key,"specialAreaId") ||
+				Call::callMaps.contains(key,"resourceId") ||
+				Call::callMaps.contains(key,"coalition")) &&
+				param != cc->param)
 			return false;
 		return true;
 	}
-	
+
 	virtual void filter(const Call *c) {
-		const GetSpecialAreaPositionCall *cc = dynamic_cast<const GetSpecialAreaPositionCall*>(c);
-		if (!Call::paramsMap.contains(label,"specialAreaId") && specialAreaId != cc->specialAreaId && specialAreaId != -1)
-			specialAreaId = -1;
+		const CallWithIntParam *cc = dynamic_cast<const CallWithIntParam*>(c);
+		if (!Call::callMaps.contains(key,"specialAreaId") &&
+				!Call::callMaps.contains(key,"resourceId") &&
+				!Call::callMaps.contains(key,"coalition") &&
+				 param != cc->param && param != -1)
+			param = -1;
 	}
-	
+
 	virtual std::pair<int,int> distance(const Call *c) const {
-		const GetSpecialAreaPositionCall *cc = dynamic_cast<const GetSpecialAreaPositionCall*>(c);
-		if (specialAreaId == cc->specialAreaId)
+		const CallWithIntParam *cc = dynamic_cast<const CallWithIntParam*>(c);
+		if (param == cc->param)
 			return std::make_pair<int,int>(0,1);
 		return std::make_pair<int,int>(1,1);
 	}
-	
+
 	virtual std::string getParams() const {
-		if (specialAreaId == -1)
+		if (param == -1)
 			return "?";
-		return boost::lexical_cast<std::string>(specialAreaId);
+		return boost::lexical_cast<std::string>(param);
 	}
-	
+
 	virtual std::string getReadableParams() const {
-		return "(" + ((specialAreaId != -1) ? boost::lexical_cast<std::string>(specialAreaId) : "_") + ")";
+		if (Call::callMaps.contains(key,"resourceId"))
+			return "(" + ((Call::resources_map.find(param) != Call::resources_map.end()) ? Call::resources_map.at(param) : "_") + ")";
+		if (Call::callMaps.contains(key,"coalition"))
+			return "(" + ((error == Call::NONE && param != CallMisc::NONE) ? std::string(Call::getEnumLabel<int>(param,Call::coalitionsArr)) : "_") + ")";
+		// cas général
+		return "(" + ((param != -1) ? boost::lexical_cast<std::string>(param) : "_") + ")";
 	}
-	
+
 	virtual std::vector<std::string> id_wrong_params(Call *c) const {
 		std::vector<std::string> ids;
-		GetSpecialAreaPositionCall *cc;
+		CallWithIntParam *cc;
 		if (c != NULL)
-			cc = dynamic_cast<GetSpecialAreaPositionCall*>(c);
-		if (error == Call::OUT_OF_RANGE || (c != NULL && specialAreaId != cc->specialAreaId))
-			ids.push_back("specialAreaId");
+			cc = dynamic_cast<CallWithIntParam*>(c);
+		if (error == Call::OUT_OF_RANGE ||
+				error == Call::INVALID_COALITION || (c != NULL && param != cc->param)){
+			if (Call::callMaps.contains(key,"specialAreaId"))
+				ids.push_back("specialAreaId");
+			if (Call::callMaps.contains(key,"resourceId"))
+				ids.push_back("resourceId");
+			if (Call::callMaps.contains(key,"coalition"))
+				ids.push_back("coalition");
+			// default
+			if (!Call::callMaps.contains(key,"specialAreaId") && !Call::callMaps.contains(key,"resourceId") && !Call::callMaps.contains(key,"coalition"))
+				ids.push_back("param");
+		}
 		return ids;
 	}
-	
 };
 
-class GetResourceCall : public Call {
-	
-public:
-
-	GetResourceCall(ErrorType error, int resourceId): Call("PP_GetResource",error), resourceId(resourceId) {}
-	
-	GetResourceCall(const GetResourceCall *c) : Call(c) {
-		resourceId = c->resourceId;
-	}
-	
-	virtual Trace::sp_trace clone() const {
-		return boost::make_shared<GetResourceCall>(this);
-	}
-	
-private:
-	
-	int resourceId;
-	
-	virtual bool compare(const Call *c) const {
-		const GetResourceCall *cc = dynamic_cast<const GetResourceCall*>(c);
-		if (Call::paramsMap.contains(label,"resourceId") && resourceId != cc->resourceId)
-			return false;
-		return true;
-	}
-	
-	virtual void filter(const Call *c) {
-		const GetResourceCall *cc = dynamic_cast<const GetResourceCall*>(c);
-		if (!Call::paramsMap.contains(label,"resourceId") && resourceId != cc->resourceId && resourceId != -1)
-			resourceId = -1;
-	}
-	
-	virtual std::pair<int,int> distance(const Call *c) const {
-		const GetResourceCall *cc = dynamic_cast<const GetResourceCall*>(c);
-		if (resourceId == cc->resourceId)
-			return std::make_pair<int,int>(0,1);
-		return std::make_pair<int,int>(1,1);
-	}
-	
-	virtual std::string getParams() const {
-		if (resourceId == -1)
-			return "?";
-		return boost::lexical_cast<std::string>(resourceId);
-	}
-	
-	virtual std::string getReadableParams() const {
-		return "(" + ((TracesAnalyser::resources_map.find(resourceId) != TracesAnalyser::resources_map.end()) ? TracesAnalyser::resources_map.at(resourceId) : "_") + ")";
-	}
-	
-	virtual std::vector<std::string> id_wrong_params(Call *c) const {
-		std::vector<std::string> ids;
-		GetResourceCall *cc;
-		if (c != NULL)
-			cc = dynamic_cast<GetResourceCall*>(c);
-		if (error == Call::OUT_OF_RANGE || (c != NULL && resourceId != cc->resourceId))
-			ids.push_back("resourceId");
-		return ids;
-	}
-	
-};
-
-class GetNumUnitsCall : public Call {
+class CallWithIntIntParams : public Call {
 
 public:
 
-	GetNumUnitsCall(ErrorType error, CallMisc::Coalition coalition): Call("PP_GetNumUnits",error), coalition(coalition) {}
-	
-	GetNumUnitsCall(const GetNumUnitsCall *c) : Call(c) {
-		coalition = c->coalition;
+	CallWithIntIntParams(ErrorType error, std::string key, int param1, int param2): Call(key,error), param1(param1), param2(param2) {}
+
+	CallWithIntIntParams(const CallWithIntIntParams *c) : Call(c) {
+		param1 = c->param1;
+		param2 = c->param2;
 	}
-	
+
 	virtual Trace::sp_trace clone() const {
-		return boost::make_shared<GetNumUnitsCall>(this);
+		return boost::make_shared<CallWithIntIntParams>(this);
 	}
-	
+
 private:
 
-	CallMisc::Coalition coalition;
-	
+	int param1;
+	int param2;
+
 	virtual bool compare(const Call *c) const {
-		const GetNumUnitsCall *cc = dynamic_cast<const GetNumUnitsCall*>(c);
-		if (Call::paramsMap.contains(label,"coalition") && coalition != cc->coalition)
+		const CallWithIntIntParams *cc = dynamic_cast<const CallWithIntIntParams*>(c);
+		if ((Call::callMaps.contains(key,"coalitionFirst") && param1 != cc->param1) || (Call::callMaps.contains(key,"indexSecond") && param2 != cc->param2))
+			return false;
+		if ((Call::callMaps.contains(key,"indexFirst") && param1 != cc->param1) || (Call::callMaps.contains(key,"coalitionSecond") && param2 != cc->param2))
 			return false;
 		return true;
 	}
-	
+
 	virtual void filter(const Call *c) {
-		const GetNumUnitsCall *cc = dynamic_cast<const GetNumUnitsCall*>(c);
-		if (!Call::paramsMap.contains(label,"coalition") && coalition != cc->coalition && coalition != CallMisc::NONE)
-			coalition = CallMisc::NONE;
+		const CallWithIntIntParams *cc = dynamic_cast<const CallWithIntIntParams*>(c);
+		if (!Call::callMaps.contains(key,"coalitionFirst") && !Call::callMaps.contains(key,"indexFirst") && param1 != cc->param1 && param1 != -1)
+			param1 = -1;
+		if (!Call::callMaps.contains(key,"coalitionSecond") && !Call::callMaps.contains(key,"indexSecond") && param2 != cc->param2 && param2 != -1)
+			param2 = -1;
 	}
-	
+
 	virtual std::pair<int,int> distance(const Call *c) const {
-		const GetNumUnitsCall *cc = dynamic_cast<const GetNumUnitsCall*>(c);
-		if (coalition == cc->coalition)
-			return std::make_pair<int,int>(0,1);
-		return std::make_pair<int,int>(1,1);
-	}
-	
-	virtual std::string getParams() const {
-		if (coalition == CallMisc::NONE)
-			return "?";
-		return boost::lexical_cast<std::string>(static_cast<int>(coalition));
-	}
-	
-	virtual std::string getReadableParams() const {
-		return "(" + ((error == Call::NONE && coalition != CallMisc::NONE) ? std::string(Call::getEnumLabel<CallMisc::Coalition>(coalition,Call::coalitionsArr)) : "_") + ")";
-	}
-	
-	virtual std::vector<std::string> id_wrong_params(Call *c) const {
-		std::vector<std::string> ids;
-		GetNumUnitsCall *cc;
-		if (c != NULL)
-			cc = dynamic_cast<GetNumUnitsCall*>(c);
-		if (error == Call::WRONG_COALITION || (c != NULL && coalition != cc->coalition))
-			ids.push_back("coalition");
-		return ids;
-	}
-
-};
-
-class GetUnitAtCall : public Call {
-	
-public:
-
-	GetUnitAtCall(ErrorType error, CallMisc::Coalition coalition, int index): Call("PP_GetUnitAt",error), coalition(coalition), index(index) {}
-	
-	GetUnitAtCall(const GetUnitAtCall *c) : Call(c) {
-		coalition = c->coalition;
-		index = c->index;
-	}
-	
-	virtual Trace::sp_trace clone() const {
-		return boost::make_shared<GetUnitAtCall>(this);
-	}
-	
-private:
-
-	CallMisc::Coalition coalition;
-	int index;
-	
-	virtual bool compare(const Call *c) const {
-		const GetUnitAtCall *cc = dynamic_cast<const GetUnitAtCall*>(c);
-		if ((Call::paramsMap.contains(label,"coalition") && coalition != cc->coalition) || (Call::paramsMap.contains(label,"index") && index != cc->index))
-			return false;
-		return true;
-	}
-	
-	virtual void filter(const Call *c) {
-		const GetUnitAtCall *cc = dynamic_cast<const GetUnitAtCall*>(c);
-		if (!Call::paramsMap.contains(label,"coalition") && coalition != cc->coalition && coalition != CallMisc::NONE)
-			coalition = CallMisc::NONE;
-		if (!Call::paramsMap.contains(label,"index") && index != cc->index && index != -1)
-			index = -1;
-	}
-	
-	virtual std::pair<int,int> distance(const Call *c) const {
-		const GetUnitAtCall *cc = dynamic_cast<const GetUnitAtCall*>(c);
+		const CallWithIntIntParams *cc = dynamic_cast<const CallWithIntIntParams*>(c);
 		int sc = 0;
-		if (coalition != cc->coalition)
+		if (param1 != cc->param1)
 			sc++;
-		if (index != cc->index)
+		if (param2 != cc->param2)
 			sc++;
 		return std::make_pair<int,int>(sc,2);
 	}
-	
+
 	virtual std::string getParams() const {
 		std::string s = "";
-		s += (coalition == CallMisc::NONE) ? "?" : boost::lexical_cast<std::string>(static_cast<int>(coalition));
+		s += (param1 == -1) ? "?" : boost::lexical_cast<std::string>(param1);
 		s += " ";
-		s += (index == -1) ? "?" : boost::lexical_cast<std::string>(index);
+		s += (param2 == -1) ? "?" : boost::lexical_cast<std::string>(param2);
 		return s;
 	}
-	
+
 	virtual std::string getReadableParams() const {
 		std::string s = "(";
-		s += (error != Call::WRONG_COALITION && coalition != CallMisc::NONE) ? Call::getEnumLabel<CallMisc::Coalition>(coalition,Call::coalitionsArr) : "_";
-		s += ",";
-		s += (index != -1) ? boost::lexical_cast<std::string>(index) : "_";
+		if (Call::callMaps.contains(key,"coalitionFirst") || Call::callMaps.contains(key,"indexSecond")){
+			s += (error != Call::INVALID_COALITION && param1 != CallMisc::NONE) ? Call::getEnumLabel<int>(param1,Call::coalitionsArr) : "_";
+			s += ",";
+			s += (param2 != -1) ? boost::lexical_cast<std::string>(param2) : "_";
+		} else if (Call::callMaps.contains(key,"indexFirst") || Call::callMaps.contains(key,"coalitionSecond")){
+			s += (param1 != -1) ? boost::lexical_cast<std::string>(param1) : "_";
+			s += ",";
+			s += (error != Call::INVALID_COALITION && param2 != CallMisc::NONE) ? Call::getEnumLabel<int>(param2,Call::coalitionsArr) : "_";
+		} else { // default case
+			s += (param1 != -1) ? boost::lexical_cast<std::string>(param1) : "_";
+			s += ",";
+			s += (param2 != -1) ? boost::lexical_cast<std::string>(param2) : "_";
+		}
 		s += ")";
 		return s;
 	}
-	
+
 	virtual std::vector<std::string> id_wrong_params(Call *c) const {
 		std::vector<std::string> ids;
-		GetUnitAtCall *cc;
+		CallWithIntIntParams *cc;
 		if (c != NULL)
-			cc = dynamic_cast<GetUnitAtCall*>(c);
-		if (c != NULL && coalition != cc->coalition)
+			cc = dynamic_cast<CallWithIntIntParams*>(c);
+		if (error == Call::INVALID_COALITION ||
+				(Call::callMaps.contains(key,"coalitionFirst") && c != NULL && param1 != cc->param1) ||
+				(Call::callMaps.contains(key,"coalitionSecond") && c != NULL && param2 != cc->param2))
 			ids.push_back("coalition");
-		if (error == Call::OUT_OF_RANGE || (c != NULL && index != cc->index))
+		if (error == Call::OUT_OF_RANGE ||
+				(Call::callMaps.contains(key,"indexFirst") && c != NULL && param1 != cc->param1) ||
+				(Call::callMaps.contains(key,"indexSecond") && c != NULL && param2 != cc->param2))
 			ids.push_back("index");
+		if (!Call::callMaps.contains(key,"coalitionFirst") && !Call::callMaps.contains(key,"indexFirst") && c != NULL && param1 != cc->param1)
+			ids.push_back("param1");
+		if (!Call::callMaps.contains(key,"coalitionSecond") && !Call::callMaps.contains(key,"indexSecond") && c != NULL && param2 != cc->param2)
+			ids.push_back("param2");
 		return ids;
 	}
-	
 };
 
-class UnitCall : public Call {
+class CallWithUnitParam : public Call {
 
 public:
 
-	UnitCall(ErrorType error, std::string label, int unitId, int unitType): Call(label,error) {
+	CallWithUnitParam(ErrorType error, std::string key, int unitId, int unitType): Call(key,error) {
 		unit.id = unitId;
 		unit.type = unitType;
 	}
-	
-	UnitCall(const UnitCall *c) : Call(c) {
+
+	CallWithUnitParam(const CallWithUnitParam *c) : Call(c) {
 		unit.id = c->unit.id;
 		unit.type = c->unit.type;
 	}
-	
+
 	virtual Trace::sp_trace clone() const {
-		return boost::make_shared<UnitCall>(this);
+		return boost::make_shared<CallWithUnitParam>(this);
 	}
-	
+
 private:
 
 	CallMisc::Unit unit;
-	
+
 	virtual bool compare(const Call *c) const {
-		const UnitCall *cc = dynamic_cast<const UnitCall*>(c);
-		if ((Call::paramsMap.contains(label,"unitId") && unit.id != cc->unit.id) || (Call::paramsMap.contains(label,"unitType") && unit.type != cc->unit.type))
+		const CallWithUnitParam *cc = dynamic_cast<const CallWithUnitParam*>(c);
+		if ((Call::callMaps.contains(key,"unitId") && unit.id != cc->unit.id) || (Call::callMaps.contains(key,"unitType") && unit.type != cc->unit.type))
 			return false;
 		return true;
 	}
-	
+
 	virtual void filter(const Call *c) {
-		const UnitCall *cc = dynamic_cast<const UnitCall*>(c);
-		if (!Call::paramsMap.contains(label,"unitId") && unit.id != cc->unit.id && unit.id != -1)
+		const CallWithUnitParam *cc = dynamic_cast<const CallWithUnitParam*>(c);
+		if (!Call::callMaps.contains(key,"unitId") && unit.id != cc->unit.id && unit.id != -1)
 			unit.id = -1;
-		if (!Call::paramsMap.contains(label,"unitType") && unit.type != cc->unit.type && unit.type != -1)
+		if (!Call::callMaps.contains(key,"unitType") && unit.type != cc->unit.type && unit.type != -1)
 			unit.type = -1;
 	}
-	
+
 	virtual std::pair<int,int> distance(const Call *c) const {
-		const UnitCall *cc = dynamic_cast<const UnitCall*>(c);
+		const CallWithUnitParam *cc = dynamic_cast<const CallWithUnitParam*>(c);
 		if (unit.type == cc->unit.type)
 			return std::make_pair<int,int>(0,1);
 		return std::make_pair<int,int>(1,1);
 	}
-	
+
 	virtual std::string getParams() const {
 		std::string s = "";
 		s += (unit.id == -1) ? "?" : boost::lexical_cast<std::string>(unit.id);
 		s += "_";
 		s += (unit.type == -1) ? "?" : boost::lexical_cast<std::string>(unit.type);
-		return s;		
+		return s;
 	}
-	
+
 	virtual std::string getReadableParams() const {
-		return "(" + ((TracesAnalyser::units_id_map.find(unit.type) != TracesAnalyser::units_id_map.end()) ? TracesAnalyser::units_id_map.at(unit.type) : "_") + ")";
+		// Ugly!!! check if the label contains "Unit::" this means it is an object oriented langage
+		// and then the first parameter is the object used to call this function. So do not display
+		// unit attributes.
+		if (Call::callMaps.getLabel(key).find("Unit::") != std::string::npos)
+			return "";
+		else
+			return "(" + ((Call::units_id_map.find(unit.type) != Call::units_id_map.end()) ? Call::units_id_map.at(unit.type)+" unit" : "_") + ")";
 	}
-	
+
 	virtual std::vector<std::string> id_wrong_params(Call *c) const {
 		std::vector<std::string> ids;
-		UnitCall *cc;
+		CallWithUnitParam *cc;
 		if (c != NULL)
-			cc = dynamic_cast<UnitCall*>(c);
+			cc = dynamic_cast<CallWithUnitParam*>(c);
 		if (c != NULL && unit.type != cc->unit.type)
 			ids.push_back("unitType");
 		return ids;
 	}
-
 };
 
-class SetGroupCall : public Call {
+class CallWithUnitIntParams : public Call {
 
 public:
 
-	SetGroupCall(ErrorType error, int unitId, int unitType, int groupId): Call("PP_Unit_SetGroup",error), groupId(groupId) {
+	CallWithUnitIntParams(ErrorType error, std::string key, int unitId, int unitType, int param): Call(key,error), param(param) {
 		unit.id = unitId;
 		unit.type = unitType;
 	}
-	
-	SetGroupCall(const SetGroupCall *c) : Call(c) {
+
+	CallWithUnitIntParams(const CallWithUnitIntParams *c) : Call(c) {
 		unit.id = c->unit.id;
 		unit.type = c->unit.type;
-		groupId = c->groupId;
+		param = c->param;
 	}
-	
+
 	virtual Trace::sp_trace clone() const {
-		return boost::make_shared<SetGroupCall>(this);
+		return boost::make_shared<CallWithUnitIntParams>(this);
 	}
-	
+
 private:
 
 	CallMisc::Unit unit;
-	int groupId;
-	
+	int param;
+
 	virtual bool compare(const Call *c) const {
-		const SetGroupCall *cc = dynamic_cast<const SetGroupCall*>(c);
-		if ((Call::paramsMap.contains(label,"unitId") && unit.id != cc->unit.id) || (Call::paramsMap.contains(label,"unitType") && unit.type != cc->unit.type) || (Call::paramsMap.contains(label,"groupId") && groupId != cc->groupId))
+		const CallWithUnitIntParams *cc = dynamic_cast<const CallWithUnitIntParams*>(c);
+		if ((Call::callMaps.contains(key,"unitId") && unit.id != cc->unit.id) || (Call::callMaps.contains(key,"unitType") && unit.type != cc->unit.type) || (Call::callMaps.contains(key,"groupId") && param != cc->param))
+			return false;
+		if ((Call::callMaps.contains(key,"unitId") && unit.id != cc->unit.id) || (Call::callMaps.contains(key,"unitType") && unit.type != cc->unit.type) || (Call::callMaps.contains(key,"coalition") && param != cc->param))
+			return false;
+		if ((Call::callMaps.contains(key,"unitId") && unit.id != cc->unit.id) || (Call::callMaps.contains(key,"unitType") && unit.type != cc->unit.type) || (Call::callMaps.contains(key,"typeToCheck") && param != cc->param))
+			return false;
+		if ((Call::callMaps.contains(key,"unitId") && unit.id != cc->unit.id) || (Call::callMaps.contains(key,"unitType") && unit.type != cc->unit.type) || (Call::callMaps.contains(key,"action") && param != cc->param))
 			return false;
 		return true;
 	}
-	
+
 	virtual void filter(const Call *c) {
-		const SetGroupCall *cc = dynamic_cast<const SetGroupCall*>(c);
-		if (!Call::paramsMap.contains(label,"unitId") && unit.id != cc->unit.id && unit.id != -1)
+		const CallWithUnitIntParams *cc = dynamic_cast<const CallWithUnitIntParams*>(c);
+		if (!Call::callMaps.contains(key,"unitId") && unit.id != cc->unit.id && unit.id != -1)
 			unit.id = -1;
-		if (!Call::paramsMap.contains(label,"unitType") && unit.type != cc->unit.type && unit.type != -1)
+		if (!Call::callMaps.contains(key,"unitType") && unit.type != cc->unit.type && unit.type != -1)
 			unit.type = -1;
-		if (!Call::paramsMap.contains(label,"groupId") && groupId != cc->groupId && groupId != -1)
-			groupId = -1;
+		if (!Call::callMaps.contains(key,"groupId") && !Call::callMaps.contains(key,"coalition") && !Call::callMaps.contains(key,"typeToCheck") && !Call::callMaps.contains(key,"action") && param != cc->param && param != -1)
+			param = -1;
 	}
-	
+
 	virtual std::pair<int,int> distance(const Call *c) const {
-		const SetGroupCall *cc = dynamic_cast<const SetGroupCall*>(c);
+		const CallWithUnitIntParams *cc = dynamic_cast<const CallWithUnitIntParams*>(c);
 		int sc = 0;
 		if (unit.type != cc->unit.type)
 			sc++;
-		if (groupId != cc->groupId)
+		if (param != cc->param)
 			sc++;
 		return std::make_pair<int,int>(sc,2);
 	}
-	
+
 	virtual std::string getParams() const {
 		std::string s = "";
 		s += (unit.id == -1) ? "?" : boost::lexical_cast<std::string>(unit.id);
 		s += "_";
 		s += (unit.type == -1) ? "?" : boost::lexical_cast<std::string>(unit.type);
 		s += " ";
-		s += (groupId == -1) ? "?" : boost::lexical_cast<std::string>(groupId);
+		s += (param == -1) ? "?" : boost::lexical_cast<std::string>(param);
 		return s;
 	}
-	
+
 	virtual std::string getReadableParams() const {
 		std::string s = "(";
-		s += (TracesAnalyser::units_id_map.find(unit.type) != TracesAnalyser::units_id_map.end()) ? TracesAnalyser::units_id_map.at(unit.type) : "_";
-		s += ",";
-		s += (groupId != -1) ? boost::lexical_cast<std::string>(groupId) : "_";
+		// Ugly!!! check if the label contains "Unit::" this means it is an object oriented langage
+		// and then the first parameter is the object used to call this function. So display
+		// unit attributes only for non object oriented langages.
+		if (Call::callMaps.getLabel(key).find("Unit::") == std::string::npos){
+			s += (Call::units_id_map.find(unit.type) != Call::units_id_map.end()) ? Call::units_id_map.at(unit.type)+" unit" : "_";
+			s += ",";
+		}
+		if (Call::callMaps.contains(key,"coalition"))
+			s += (error == Call::NONE && param != CallMisc::NONE) ? std::string(Call::getEnumLabel<int>(param,Call::coalitionsArr)) : "_";
+		else if (Call::callMaps.contains(key,"typeToCheck"))
+			s += (param != -1 && Call::units_id_map.find(param) != Call::units_id_map.end()) ? Call::units_id_map.at(param) : "_";
+		else if (Call::callMaps.contains(key,"action"))
+			s += (param != -1 && Call::orders_map.find(param) != Call::orders_map.end()) ? Call::orders_map.at(param) : "_";
+		else // case for "groupId", and default case
+			s += (param != -1) ? boost::lexical_cast<std::string>(param) : "_";
 		s += ")";
 		return s;
 	}
-	
+
 	virtual std::vector<std::string> id_wrong_params(Call *c) const {
 		std::vector<std::string> ids;
-		SetGroupCall *cc;
+		CallWithUnitIntParams *cc;
 		if (c != NULL)
-			cc = dynamic_cast<SetGroupCall*>(c);
+			cc = dynamic_cast<CallWithUnitIntParams*>(c);
+		// check unit
 		if (c != NULL && unit.type != cc->unit.type)
 			ids.push_back("unitType");
-		if (error == Call::OUT_OF_RANGE || (c != NULL && groupId != cc->groupId))
+		// check param
+		if (Call::callMaps.contains(key,"groupId") && (error == Call::OUT_OF_RANGE || (c != NULL && param != cc->param)))
 			ids.push_back("groupId");
+		else if (Call::callMaps.contains(key,"coalition") && (error == Call::INVALID_COALITION || (c != NULL && param != cc->param)))
+			ids.push_back("coalition");
+		else if (Call::callMaps.contains(key,"typeToCheck") && c != NULL && param != cc->param)
+			ids.push_back("typeToCheck");
+		else if (Call::callMaps.contains(key,"action") && c != NULL && param != cc->param)
+			ids.push_back("action");
+		else if (c != NULL && param != cc->param)
+			ids.push_back("param2");
 		return ids;
 	}
-	
+
 };
 
-class ActionOnUnitCall : public Call {
-	
+class CallWithIntUnitParams : public Call {
+
 public:
-		
-	ActionOnUnitCall(ErrorType error, int unitId, int unitType, int action, int targetId, int targetType): Call("PP_Unit_ActionOnUnit",error), action(action) {
+
+	CallWithIntUnitParams(ErrorType error, std::string key, int param, int unitId, int unitType): Call(key,error), param(param) {
+		unit.id = unitId;
+		unit.type = unitType;
+	}
+
+	CallWithIntUnitParams(const CallWithIntUnitParams *c) : Call(c) {
+		unit.id = c->unit.id;
+		unit.type = c->unit.type;
+		param = c->param;
+	}
+
+	virtual Trace::sp_trace clone() const {
+		return boost::make_shared<CallWithIntUnitParams>(this);
+	}
+
+private:
+
+	CallMisc::Unit unit;
+	int param;
+
+	virtual bool compare(const Call *c) const {
+		const CallWithIntUnitParams *cc = dynamic_cast<const CallWithIntUnitParams*>(c);
+		if ((Call::callMaps.contains(key,"index") && param != cc->param) || (Call::callMaps.contains(key,"unitId") && unit.id != cc->unit.id) || (Call::callMaps.contains(key,"unitType") && unit.type != cc->unit.type))
+			return false;
+		return true;
+	}
+
+	virtual void filter(const Call *c) {
+		const CallWithIntUnitParams *cc = dynamic_cast<const CallWithIntUnitParams*>(c);
+		if (!Call::callMaps.contains(key,"index") && param != cc->param && param != -1)
+			param = -1;
+		if (!Call::callMaps.contains(key,"unitId") && unit.id != cc->unit.id && unit.id != -1)
+			unit.id = -1;
+		if (!Call::callMaps.contains(key,"unitType") && unit.type != cc->unit.type && unit.type != -1)
+			unit.type = -1;
+	}
+
+	virtual std::pair<int,int> distance(const Call *c) const {
+		const CallWithIntUnitParams *cc = dynamic_cast<const CallWithIntUnitParams*>(c);
+		int sc = 0;
+		if (param != cc->param)
+			sc++;
+		if (unit.type != cc->unit.type)
+			sc++;
+		return std::make_pair<int,int>(sc,2);
+	}
+
+	virtual std::string getParams() const {
+		std::string s = "";
+		s += (param == -1) ? "?" : boost::lexical_cast<std::string>(param);
+		s += " ";
+		s += (unit.id == -1) ? "?" : boost::lexical_cast<std::string>(unit.id);
+		s += "_";
+		s += (unit.type == -1) ? "?" : boost::lexical_cast<std::string>(unit.type);
+		return s;
+	}
+
+	virtual std::string getReadableParams() const {
+		std::string s = "(";
+		s += (param != -1) ? boost::lexical_cast<std::string>(param) : "_";
+		s += ",";
+		s += (Call::units_id_map.find(unit.type) != Call::units_id_map.end()) ? Call::units_id_map.at(unit.type)+" unit" : "_";
+		s += ")";
+		return s;
+	}
+
+	virtual std::vector<std::string> id_wrong_params(Call *c) const {
+		std::vector<std::string> ids;
+		CallWithIntUnitParams *cc;
+		if (c != NULL)
+			cc = dynamic_cast<CallWithIntUnitParams*>(c);
+		// param
+		if (Call::callMaps.contains(key,"index") && (error == Call::OUT_OF_RANGE || (c != NULL && param != cc->param)))
+			ids.push_back("index");
+		else if (c != NULL && param != cc->param)
+			ids.push_back("param1");
+
+		// unit type
+		if (c != NULL && unit.type != cc->unit.type)
+			ids.push_back("unitType");
+		return ids;
+	}
+
+};
+
+class CallWithIntIntUnitParams : public Call {
+
+public:
+
+	CallWithIntIntUnitParams(ErrorType error, std::string key, int param1, int param2, int unitId, int unitType): Call(key,error), param1(param1), param2(param2) {
+		unit.id = unitId;
+		unit.type = unitType;
+	}
+
+	CallWithIntIntUnitParams(const CallWithIntIntUnitParams *c) : Call(c) {
+		unit.id = c->unit.id;
+		unit.type = c->unit.type;
+		param1 = c->param1;
+		param2 = c->param2;
+	}
+
+	virtual Trace::sp_trace clone() const {
+		return boost::make_shared<CallWithIntIntUnitParams>(this);
+	}
+
+private:
+
+	CallMisc::Unit unit;
+	int param1;
+	int param2;
+
+	virtual bool compare(const Call *c) const {
+		const CallWithIntIntUnitParams *cc = dynamic_cast<const CallWithIntIntUnitParams*>(c);
+		if ((Call::callMaps.contains(key,"paramIndex") && param1 != cc->param1) || (Call::callMaps.contains(key,"cmdIndex") && param2 != cc->param2) || (Call::callMaps.contains(key,"unitId") && unit.id != cc->unit.id) || (Call::callMaps.contains(key,"unitType") && unit.type != cc->unit.type))
+			return false;
+		return true;
+	}
+
+	virtual void filter(const Call *c) {
+		const CallWithIntIntUnitParams *cc = dynamic_cast<const CallWithIntIntUnitParams*>(c);
+		if (!Call::callMaps.contains(key,"paramIndex") && param1 != cc->param1 && param1 != -1)
+			param1 = -1;
+		if (!Call::callMaps.contains(key,"cmdIndex") && param2 != cc->param2 && param2 != -1)
+			param2 = -1;
+		if (!Call::callMaps.contains(key,"unitId") && unit.id != cc->unit.id && unit.id != -1)
+			unit.id = -1;
+		if (!Call::callMaps.contains(key,"unitType") && unit.type != cc->unit.type && unit.type != -1)
+			unit.type = -1;
+	}
+
+	virtual std::pair<int,int> distance(const Call *c) const {
+		const CallWithIntIntUnitParams *cc = dynamic_cast<const CallWithIntIntUnitParams*>(c);
+		int sc = 0;
+		if (param1 != cc->param1)
+			sc++;
+		if (param2 != cc->param2)
+			sc++;
+		if (unit.type != cc->unit.type)
+			sc++;
+		return std::make_pair<int,int>(sc,3);
+	}
+
+	virtual std::string getParams() const {
+		std::string s = "";
+		s += (param1 == -1) ? "?" : boost::lexical_cast<std::string>(param1);
+		s += " ";
+		s += (param2 == -1) ? "?" : boost::lexical_cast<std::string>(param2);
+		s += " ";
+		s += (unit.id == -1) ? "?" : boost::lexical_cast<std::string>(unit.id);
+		s += "_";
+		s += (unit.type == -1) ? "?" : boost::lexical_cast<std::string>(unit.type);
+		return s;
+	}
+
+	virtual std::string getReadableParams() const {
+		std::string s = "(";
+		s += (param1 != -1) ? boost::lexical_cast<std::string>(param1) : "_";
+		s += ",";
+		s += (param2 != -1) ? boost::lexical_cast<std::string>(param2) : "_";
+		s += ",";
+		s += (Call::units_id_map.find(unit.type) != Call::units_id_map.end()) ? Call::units_id_map.at(unit.type)+ "unit" : "_";
+		s += ")";
+		return s;
+	}
+
+	virtual std::vector<std::string> id_wrong_params(Call *c) const {
+		std::vector<std::string> ids;
+		CallWithIntIntUnitParams *cc;
+		if (c != NULL)
+			cc = dynamic_cast<CallWithIntIntUnitParams*>(c);
+		// param 1
+		if (c != NULL && param1 != cc->param1)
+			ids.push_back("param1");
+
+		// param 2
+		if (c != NULL && param2 != cc->param2)
+			ids.push_back("param2");
+
+		// unit type
+		if (c != NULL && unit.type != cc->unit.type)
+			ids.push_back("unitType");
+		return ids;
+	}
+
+};
+
+class CallWithIntUnitIntParams : public Call {
+
+public:
+
+	CallWithIntUnitIntParams(ErrorType error, std::string key, int param1, int unitId, int unitType, int param3): Call(key,error), param1(param1), param3(param3) {
+		unit.id = unitId;
+		unit.type = unitType;
+	}
+
+	CallWithIntUnitIntParams(const CallWithIntUnitIntParams *c) : Call(c) {
+		unit.id = c->unit.id;
+		unit.type = c->unit.type;
+		param1 = c->param1;
+		param3 = c->param3;
+	}
+
+	virtual Trace::sp_trace clone() const {
+		return boost::make_shared<CallWithIntUnitIntParams>(this);
+	}
+
+private:
+
+	CallMisc::Unit unit;
+	int param1;
+	int param3;
+
+	virtual bool compare(const Call *c) const {
+		const CallWithIntUnitIntParams *cc = dynamic_cast<const CallWithIntUnitIntParams*>(c);
+		if ((Call::callMaps.contains(key,"index") && param1 != cc->param1) || (Call::callMaps.contains(key,"unitId") && unit.id != cc->unit.id) || (Call::callMaps.contains(key,"unitType") && unit.type != cc->unit.type) || (Call::callMaps.contains(key,"action") && param3 != cc->param3))
+			return false;
+		return true;
+	}
+
+	virtual void filter(const Call *c) {
+		const CallWithIntUnitIntParams *cc = dynamic_cast<const CallWithIntUnitIntParams*>(c);
+		if (!Call::callMaps.contains(key,"index") && param1 != cc->param1 && param1 != -1)
+			param1 = -1;
+		if (!Call::callMaps.contains(key,"unitId") && unit.id != cc->unit.id && unit.id != -1)
+			unit.id = -1;
+		if (!Call::callMaps.contains(key,"unitType") && unit.type != cc->unit.type && unit.type != -1)
+			unit.type = -1;
+		if (!Call::callMaps.contains(key,"action") && param3 != cc->param3 && param3 != -1)
+			param3 = -1;
+	}
+
+	virtual std::pair<int,int> distance(const Call *c) const {
+		const CallWithIntUnitIntParams *cc = dynamic_cast<const CallWithIntUnitIntParams*>(c);
+		int sc = 0;
+		if (param1 != cc->param1)
+			sc++;
+		if (unit.type != cc->unit.type)
+			sc++;
+		if (param3 != cc->param3)
+			sc++;
+		return std::make_pair<int,int>(sc,3);
+	}
+
+	virtual std::string getParams() const {
+		std::string s = "";
+		s += (param1 == -1) ? "?" : boost::lexical_cast<std::string>(param1);
+		s += " ";
+		s += (unit.id == -1) ? "?" : boost::lexical_cast<std::string>(unit.id);
+		s += "_";
+		s += (unit.type == -1) ? "?" : boost::lexical_cast<std::string>(unit.type);
+		s += " ";
+		s += (param3 == -1) ? "?" : boost::lexical_cast<std::string>(param3);
+		return s;
+	}
+
+	virtual std::string getReadableParams() const {
+		std::string s = "(";
+		s += (param1 != -1) ? boost::lexical_cast<std::string>(param1) : "_";
+		s += ",";
+		s += (Call::units_id_map.find(unit.type) != Call::units_id_map.end()) ? Call::units_id_map.at(unit.type)+" unit" : "_";
+		s += ",";
+		s += (param3 != -1) ? boost::lexical_cast<std::string>(param3) : "_";
+		s += ")";
+		return s;
+	}
+
+	virtual std::vector<std::string> id_wrong_params(Call *c) const {
+		std::vector<std::string> ids;
+		CallWithIntUnitIntParams *cc;
+		if (c != NULL)
+			cc = dynamic_cast<CallWithIntUnitIntParams*>(c);
+		// param 1
+		if (Call::callMaps.contains(key,"index") && (error == Call::OUT_OF_RANGE || (c != NULL && param1 != cc->param1)))
+			ids.push_back("index");
+		else if (c != NULL && param1 != cc->param1)
+			ids.push_back("param1");
+
+		// unit type
+		if (c != NULL && unit.type != cc->unit.type)
+			ids.push_back("unitType");
+
+		// param 3
+		if (Call::callMaps.contains(key,"action") && c != NULL && param3 != cc->param3)
+			ids.push_back("action");
+		else if (c != NULL && param3 != cc->param3)
+			ids.push_back("param3");
+		return ids;
+	}
+
+};
+
+class CallWithUnitIntUnitParams : public Call {
+
+public:
+
+	CallWithUnitIntUnitParams(ErrorType error, std::string key, int unitId, int unitType, int param, int targetId, int targetType): Call(key,error), param(param) {
 		unit.id = unitId;
 		unit.type = unitType;
 		target.id = targetId;
 		target.type = targetType;
 	}
-	
-	ActionOnUnitCall(const ActionOnUnitCall *c) : Call(c) {
+
+	CallWithUnitIntUnitParams(const CallWithUnitIntUnitParams *c) : Call(c) {
 		unit.id = c->unit.id;
 		unit.type = c->unit.type;
-		action = c->action;
+		param = c->param;
 		target.id = c->target.id;
 		target.type = c->target.type;
 	}
-	
+
 	virtual Trace::sp_trace clone() const {
-		return boost::make_shared<ActionOnUnitCall>(this);
+		return boost::make_shared<CallWithUnitIntUnitParams>(this);
 	}
-	
+
 private:
-		
+
 	CallMisc::Unit unit;
-	int action;
+	int param;
 	CallMisc::Unit target;
-	
+
 	virtual bool compare(const Call *c) const {
-		const ActionOnUnitCall *cc = dynamic_cast<const ActionOnUnitCall*>(c);
-		if ((Call::paramsMap.contains(label,"unitId") && unit.id != cc->unit.id) || (Call::paramsMap.contains(label,"unitType") && unit.type != cc->unit.type) || (Call::paramsMap.contains(label,"action") && action != cc->action) || (Call::paramsMap.contains(label,"targetId") && target.id != cc->target.id) || (Call::paramsMap.contains(label,"targetType") && target.type != cc->target.type))
+		const CallWithUnitIntUnitParams *cc = dynamic_cast<const CallWithUnitIntUnitParams*>(c);
+		if ((Call::callMaps.contains(key,"unitId") && unit.id != cc->unit.id) || (Call::callMaps.contains(key,"unitType") && unit.type != cc->unit.type) || (Call::callMaps.contains(key,"action") && param != cc->param) || (Call::callMaps.contains(key,"targetId") && target.id != cc->target.id) || (Call::callMaps.contains(key,"targetType") && target.type != cc->target.type))
 			return false;
-		return true;	
+		return true;
 	}
-	
+
 	virtual void filter(const Call *c) {
-		const ActionOnUnitCall *cc = dynamic_cast<const ActionOnUnitCall*>(c);
-		if (!Call::paramsMap.contains(label,"unitId") && unit.id != cc->unit.id && unit.id != -1)
+		const CallWithUnitIntUnitParams *cc = dynamic_cast<const CallWithUnitIntUnitParams*>(c);
+		if (!Call::callMaps.contains(key,"unitId") && unit.id != cc->unit.id && unit.id != -1)
 			unit.id = -1;
-		if (!Call::paramsMap.contains(label,"unitType") && unit.type != cc->unit.type && unit.type != -1)
+		if (!Call::callMaps.contains(key,"unitType") && unit.type != cc->unit.type && unit.type != -1)
 			unit.type = -1;
-		if (!Call::paramsMap.contains(label,"action") && action != cc->action && action != -1)
-			action = -1;
-		if (!Call::paramsMap.contains(label,"targetId") && target.id != cc->target.id && target.id != -1)
+		if (!Call::callMaps.contains(key,"action") && param != cc->param && param != -1)
+			param = -1;
+		if (!Call::callMaps.contains(key,"targetId") && target.id != cc->target.id && target.id != -1)
 			target.id = -1;
-		if (!Call::paramsMap.contains(label,"targetType") && target.type != cc->target.type && target.type != -1)
+		if (!Call::callMaps.contains(key,"targetType") && target.type != cc->target.type && target.type != -1)
 			target.type = -1;
 	}
-	
+
 	virtual std::pair<int,int> distance(const Call *c) const {
-		const ActionOnUnitCall *cc = dynamic_cast<const ActionOnUnitCall*>(c);
+		const CallWithUnitIntUnitParams *cc = dynamic_cast<const CallWithUnitIntUnitParams*>(c);
 		int sc = 0;
 		if (unit.type != cc->unit.type)
 			sc++;
-		if (action != cc->action)
+		if (param != cc->param)
 			sc++;
 		if (target.type != cc->target.type)
 			sc++;
 		return std::make_pair<int,int>(sc,3);
 	}
-	
+
 	virtual std::string getParams() const {
 		std::string s = "";
 		s += (unit.id == -1) ? "?" : boost::lexical_cast<std::string>(unit.id);
 		s += "_";
 		s += (unit.type == -1) ? "?" : boost::lexical_cast<std::string>(unit.type);
 		s += " ";
-		s += (action == -1) ? "?" : boost::lexical_cast<std::string>(action);
+		s += (param == -1) ? "?" : boost::lexical_cast<std::string>(param);
 		s += " ";
 		s += (target.id == -1) ? "?" : boost::lexical_cast<std::string>(target.id);
 		s += "_";
 		s += (target.type == -1) ? "?" : boost::lexical_cast<std::string>(target.type);
 		return s;
 	}
-	
+
 	virtual std::string getReadableParams() const {
 		std::string s = "(";
-		s += (TracesAnalyser::units_id_map.find(unit.type) != TracesAnalyser::units_id_map.end()) ? TracesAnalyser::units_id_map.at(unit.type) : "_";
+		// Ugly!!! check if the label contains "Unit::" this means it is an object oriented langage
+		// and then the first parameter is the object used to call this function. So display
+		// unit attributes only for non object oriented langages.
+		if (Call::callMaps.getLabel(key).find("Unit::") == std::string::npos){
+			s += (Call::units_id_map.find(unit.type) != Call::units_id_map.end()) ? Call::units_id_map.at(unit.type)+" unit" : "_";
+			s += ",";
+		}
+		s += (Call::orders_map.find(param) != Call::orders_map.end()) ? Call::orders_map.at(param) : "_";
 		s += ",";
-		s += (TracesAnalyser::orders_map.find(action) != TracesAnalyser::orders_map.end()) ? TracesAnalyser::orders_map.at(action) : "_";
-		s += ",";
-		s += (TracesAnalyser::units_id_map.find(target.type) != TracesAnalyser::units_id_map.end()) ? TracesAnalyser::units_id_map.at(target.type) : "_";
+		s += (Call::units_id_map.find(target.type) != Call::units_id_map.end()) ? Call::units_id_map.at(target.type)+" unit" : "_";
 		s += ")";
 		return s;
 	}
-	
+
 	virtual std::vector<std::string> id_wrong_params(Call *c) const {
 		std::vector<std::string> ids;
-		ActionOnUnitCall *cc;
+		CallWithUnitIntUnitParams *cc;
 		if (c != NULL)
-			cc = dynamic_cast<ActionOnUnitCall*>(c);
+			cc = dynamic_cast<CallWithUnitIntUnitParams*>(c);
+		// check unit
 		if (c != NULL && unit.type != cc->unit.type)
 			ids.push_back("unitType");
-		if (c != NULL && action != cc->action)
+		// check param
+		if (c != NULL && param != cc->param)
 			ids.push_back("action");
+		// check target
 		if (c != NULL && target.type != cc->target.type)
 			ids.push_back("targetType");
 		return ids;
 	}
-
 };
 
-class ActionOnPositionCall : public Call {
+class CallWithUnitIntPosParams : public Call {
 
 public:
-		
-	ActionOnPositionCall(ErrorType error, int unitId, int unitType, int action, float x, float y): Call("PP_Unit_ActionOnPosition",error), action(action) {
+
+	CallWithUnitIntPosParams(ErrorType error, std::string key, int unitId, int unitType, int param, float x, float y): Call(key,error), param(param) {
 		unit.id = unitId;
 		unit.type = unitType;
 		pos.x = x;
 		pos.y = y;
 	}
-	
-	ActionOnPositionCall(const ActionOnPositionCall *c) : Call(c) {
+
+	CallWithUnitIntPosParams(const CallWithUnitIntPosParams *c) : Call(c) {
 		unit.id = c->unit.id;
 		unit.type = c->unit.type;
-		action = c->action;
+		param = c->param;
 		pos.x = c->pos.x;
 		pos.y = c->pos.y;
 	}
-	
+
 	virtual Trace::sp_trace clone() const {
-		return boost::make_shared<ActionOnPositionCall>(this);
+		return boost::make_shared<CallWithUnitIntPosParams>(this);
 	}
-	
+
 private:
-		
+
 	CallMisc::Unit unit;
-	int action;
+	int param;
 	CallMisc::Position pos;
-	
+
 	virtual bool compare(const Call *c) const {
-		const ActionOnPositionCall *cc = dynamic_cast<const ActionOnPositionCall*>(c);
-		if ((Call::paramsMap.contains(label,"unitId") && unit.id != cc->unit.id) || (Call::paramsMap.contains(label,"unitType") && unit.type != cc->unit.type) || (Call::paramsMap.contains(label,"action") && action != cc->action) || (Call::paramsMap.contains(label,"position") && pos != cc->pos))
+		const CallWithUnitIntPosParams *cc = dynamic_cast<const CallWithUnitIntPosParams*>(c);
+		if ((Call::callMaps.contains(key,"unitId") && unit.id != cc->unit.id) || (Call::callMaps.contains(key,"unitType") && unit.type != cc->unit.type) || (Call::callMaps.contains(key,"action") && param != cc->param) || (Call::callMaps.contains(key,"position") && pos != cc->pos))
 			return false;
 		return true;
 	}
-	
+
 	virtual void filter(const Call *c) {
-		const ActionOnPositionCall *cc = dynamic_cast<const ActionOnPositionCall*>(c);
-		if (!Call::paramsMap.contains(label,"unitId") && unit.id != cc->unit.id && unit.id != -1)
+		const CallWithUnitIntPosParams *cc = dynamic_cast<const CallWithUnitIntPosParams*>(c);
+		if (!Call::callMaps.contains(key,"unitId") && unit.id != cc->unit.id && unit.id != -1)
 			unit.id = -1;
-		if (!Call::paramsMap.contains(label,"unitType") && unit.type != cc->unit.type && unit.type != -1)
+		if (!Call::callMaps.contains(key,"unitType") && unit.type != cc->unit.type && unit.type != -1)
 			unit.type = -1;
-		if (!Call::paramsMap.contains(label,"action") && action != cc->action && action != -1)
-			action = -1;
-		if (!Call::paramsMap.contains(label,"position") && pos.x != cc->pos.x && pos.x != -1)
+		if (!Call::callMaps.contains(key,"action") && param != cc->param && param != -1)
+			param = -1;
+		if (!Call::callMaps.contains(key,"position") && pos.x != cc->pos.x && pos.x != -1)
 			pos.x = -1;
-		if (!Call::paramsMap.contains(label,"position") && pos.y != cc->pos.y && pos.y != -1)
+		if (!Call::callMaps.contains(key,"position") && pos.y != cc->pos.y && pos.y != -1)
 			pos.y = -1;
 	}
-	
+
 	virtual std::pair<int,int> distance(const Call *c) const {
-		const ActionOnPositionCall *cc = dynamic_cast<const ActionOnPositionCall*>(c);
+		const CallWithUnitIntPosParams *cc = dynamic_cast<const CallWithUnitIntPosParams*>(c);
 		int sc = 0;
 		if (unit.type != cc->unit.type)
 			sc++;
-		if (action != cc->action)
+		if (param != cc->param)
 			sc++;
 		if (pos.x != cc->pos.x)
 			sc++;
@@ -656,26 +910,31 @@ private:
 			sc++;
 		return std::make_pair<int,int>(sc,4);
 	}
-	
+
 	virtual std::string getParams() const {
 		std::string s = "";
 		s += (unit.id == -1) ? "?" : boost::lexical_cast<std::string>(unit.id);
 		s += "_";
 		s += (unit.type == -1) ? "?" : boost::lexical_cast<std::string>(unit.type);
 		s += " ";
-		s += (action == -1) ? "?" : boost::lexical_cast<std::string>(action);
+		s += (param == -1) ? "?" : boost::lexical_cast<std::string>(param);
 		s += " ";
 		s += (pos.x == -1) ? "?" : boost::lexical_cast<std::string>(pos.x);
 		s += " ";
 		s += (pos.y == -1) ? "?" : boost::lexical_cast<std::string>(pos.y);
 		return s;
 	}
-	
+
 	virtual std::string getReadableParams() const {
 		std::string s = "(";
-		s += (TracesAnalyser::units_id_map.find(unit.type) != TracesAnalyser::units_id_map.end()) ? TracesAnalyser::units_id_map.at(unit.type) : "_";
-		s += ",";
-		s += (TracesAnalyser::orders_map.find(action) != TracesAnalyser::orders_map.end()) ? TracesAnalyser::orders_map.at(action) : "_";
+		// Ugly!!! check if the label contains "Unit::" this means it is an object oriented langage
+		// and then the first parameter is the object used to call this function. So display
+		// unit attributes only for non object oriented langages.
+		if (Call::callMaps.getLabel(key).find("Unit::") == std::string::npos){
+			s += (Call::units_id_map.find(unit.type) != Call::units_id_map.end()) ? Call::units_id_map.at(unit.type)+" unit" : "_";
+			s += ",";
+		}
+		s += (Call::orders_map.find(param) != Call::orders_map.end()) ? Call::orders_map.at(param) : "_";
 		s += ",";
 		s += (pos.x != -1) ? boost::lexical_cast<std::string>(pos.x) : "_";
 		s += ",";
@@ -683,160 +942,171 @@ private:
 		s += ")";
 		return s;
 	}
-	
+
 	virtual std::vector<std::string> id_wrong_params(Call *c) const {
 		std::vector<std::string> ids;
-		ActionOnPositionCall *cc;
+		CallWithUnitIntPosParams *cc;
 		if (c != NULL)
-			cc = dynamic_cast<ActionOnPositionCall*>(c);
+			cc = dynamic_cast<CallWithUnitIntPosParams*>(c);
+		// check unit
 		if (c != NULL && unit.type != cc->unit.type)
 			ids.push_back("unitType");
-		if (c != NULL && action != cc->action)
+		// check param
+		if (c != NULL && param != cc->param)
 			ids.push_back("action");
+		// check position
 		if (c != NULL && pos != cc->pos)
 			ids.push_back("position");
 		return ids;
 	}
-
 };
 
-class UntargetedActionCall : public Call {
+class CallWithUnitIntFloatParams : public Call {
 
 public:
-		
-	UntargetedActionCall(ErrorType error, int unitId, int unitType, int action, float param): Call("PP_Unit_UntargetedAction",error), action(action), param(param) {
+
+	CallWithUnitIntFloatParams(ErrorType error, std::string key, int unitId, int unitType, int param1, float param2): Call(key,error), param1(param1), param2(param2) {
 		unit.id = unitId;
 		unit.type = unitType;
 	}
-	
-	UntargetedActionCall(const UntargetedActionCall *c) : Call(c) {
+
+	CallWithUnitIntFloatParams(const CallWithUnitIntFloatParams *c) : Call(c) {
 		unit.id = c->unit.id;
 		unit.type = c->unit.type;
-		action = c->action;
-		param = c->param;
+		param1 = c->param1;
+		param2 = c->param2;
 	}
-	
+
 	virtual Trace::sp_trace clone() const {
-		return boost::make_shared<UntargetedActionCall>(this);
+		return boost::make_shared<CallWithUnitIntFloatParams>(this);
 	}
-	
+
 private:
-		
+
 	CallMisc::Unit unit;
-	int action;
-	float param;
-	
+	int param1;
+	float param2;
+
 	virtual bool compare(const Call *c) const {
-		const UntargetedActionCall *cc = dynamic_cast<const UntargetedActionCall*>(c);
-		if ((Call::paramsMap.contains(label,"unitId") && unit.id != cc->unit.id) || (Call::paramsMap.contains(label,"unitType") && unit.type != cc->unit.type) || (Call::paramsMap.contains(label,"action") && action != cc->action) || (Call::paramsMap.contains(label,"param") && param != cc->param))
+		const CallWithUnitIntFloatParams *cc = dynamic_cast<const CallWithUnitIntFloatParams*>(c);
+		if ((Call::callMaps.contains(key,"unitId") && unit.id != cc->unit.id) || (Call::callMaps.contains(key,"unitType") && unit.type != cc->unit.type) || (Call::callMaps.contains(key,"action") && param1 != cc->param1) || (Call::callMaps.contains(key,"param") && param2 != cc->param2))
 			return false;
 		return true;
 	}
-	
+
 	virtual void filter(const Call *c) {
-		const UntargetedActionCall *cc = dynamic_cast<const UntargetedActionCall*>(c);
-		if (!Call::paramsMap.contains(label,"unitId") && unit.id != cc->unit.id && unit.id != -1)
+		const CallWithUnitIntFloatParams *cc = dynamic_cast<const CallWithUnitIntFloatParams*>(c);
+		if (!Call::callMaps.contains(key,"unitId") && unit.id != cc->unit.id && unit.id != -1)
 			unit.id = -1;
-		if (!Call::paramsMap.contains(label,"unitType") && unit.type != cc->unit.type && unit.type != -1)
+		if (!Call::callMaps.contains(key,"unitType") && unit.type != cc->unit.type && unit.type != -1)
 			unit.type = -1;
-		if (!Call::paramsMap.contains(label,"action") && action != cc->action && action != -1)
-			action = -1;
-		if (!Call::paramsMap.contains(label,"param") && param != cc->param && param != -1)
-			param = -1;
+		if (!Call::callMaps.contains(key,"action") && param1 != cc->param1 && param1 != -1)
+			param1 = -1;
+		if (!Call::callMaps.contains(key,"param") && param2 != cc->param2 && param2 != -1)
+			param2 = -1;
 	}
-	
+
 	virtual std::pair<int,int> distance(const Call *c) const {
-		const UntargetedActionCall *cc = dynamic_cast<const UntargetedActionCall*>(c);
+		const CallWithUnitIntFloatParams *cc = dynamic_cast<const CallWithUnitIntFloatParams*>(c);
 		int sc = 0;
 		if (unit.type != cc->unit.type)
 			sc++;
-		if (action != cc->action)
+		if (param1 != cc->param1)
 			sc++;
-		if (param != cc->param)
+		if (param2 != cc->param2)
 			sc++;
 		return std::make_pair<int,int>(sc,3);
 	}
-	
+
 	virtual std::string getParams() const {
 		std::string s = "";
 		s += (unit.id == -1) ? "?" : boost::lexical_cast<std::string>(unit.id);
 		s += "_";
 		s += (unit.type == -1) ? "?" : boost::lexical_cast<std::string>(unit.type);
 		s += " ";
-		s += (action == -1) ? "?" : boost::lexical_cast<std::string>(action);
+		s += (param1 == -1) ? "?" : boost::lexical_cast<std::string>(param1);
 		s += " ";
-		s += (param == -1) ? "?" : boost::lexical_cast<std::string>(param);
+		s += (param2 == -1) ? "?" : boost::lexical_cast<std::string>(param2);
 		return s;
 	}
-	
+
 	virtual std::string getReadableParams() const {
 		std::string s = "(";
-		s += (TracesAnalyser::units_id_map.find(unit.type) != TracesAnalyser::units_id_map.end()) ? TracesAnalyser::units_id_map.at(unit.type) : "_";
+		// Ugly!!! check if the label contains "Unit::" this means it is an object oriented langage
+		// and then the first parameter is the object used to call this function. So display
+		// unit attributes only for non object oriented langages.
+		if (Call::callMaps.getLabel(key).find("Unit::") == std::string::npos){
+			s += (Call::units_id_map.find(unit.type) != Call::units_id_map.end()) ? Call::units_id_map.at(unit.type)+" unit" : "_";
+			s += ",";
+		}
+		s += (Call::orders_map.find(param1) != Call::orders_map.end()) ? Call::orders_map.at(param1) : "_";
 		s += ",";
-		s += (TracesAnalyser::orders_map.find(action) != TracesAnalyser::orders_map.end()) ? TracesAnalyser::orders_map.at(action) : "_";
-		s += ",";
-		s += (param != -1) ? boost::lexical_cast<std::string>(param) : "_";
+		s += (param2 != -1) ? boost::lexical_cast<std::string>(param2) : "_";
 		s += ")";
 		return s;
 	}
-	
+
 	virtual std::vector<std::string> id_wrong_params(Call *c) const {
 		std::vector<std::string> ids;
-		UntargetedActionCall *cc;
+		CallWithUnitIntFloatParams *cc;
 		if (c != NULL)
-			cc = dynamic_cast<UntargetedActionCall*>(c);
+			cc = dynamic_cast<CallWithUnitIntFloatParams*>(c);
+		// check unit
 		if (c != NULL && unit.type != cc->unit.type)
 			ids.push_back("unitType");
-		if (c != NULL && action != cc->action)
+		// check action
+		if (c != NULL && param1 != cc->param1)
 			ids.push_back("action");
-		if (c != NULL && param != cc->param)
-			ids.push_back("param");
+		// check param
+		if (c != NULL && param2 != cc->param2)
+			ids.push_back("param3");
 		return ids;
 	}
-
 };
 
+/* Supprimer code ci-dessous */
+/*
 class GetCodePdgCmdCall : public Call {
 
 public:
-		
-	GetCodePdgCmdCall(ErrorType error, int unitId, int unitType, int idCmd): Call("PP_Unit_PdgCmd_GetCode",error), idCmd(idCmd) {
+
+	GetCodePdgCmdCall(ErrorType error, int unitId, int unitType, int idCmd): Call(CALL_UNIT_PDG_CMD_GET_CODE,error), idCmd(idCmd) {
 		unit.id = unitId;
 		unit.type = unitType;
 	}
-	
+
 	GetCodePdgCmdCall(const GetCodePdgCmdCall *c) : Call(c) {
 		unit.id = c->unit.id;
 		unit.type = c->unit.type;
 		idCmd = c->idCmd;
 	}
-	
+
 	virtual Trace::sp_trace clone() const {
 		return boost::make_shared<GetCodePdgCmdCall>(this);
 	}
-	
+
 private:
-		
+
 	CallMisc::Unit unit;
 	int idCmd;
-	
+
 	virtual bool compare(const Call *c) const {
 		const GetCodePdgCmdCall *cc = dynamic_cast<const GetCodePdgCmdCall*>(c);
-		if ((Call::paramsMap.contains(label,"unitId") && unit.id != cc->unit.id) || (Call::paramsMap.contains(label,"unitType") && unit.type != cc->unit.type) || (Call::paramsMap.contains(label,"idCmd") && idCmd != cc->idCmd))
+		if ((Call::callMaps.contains(key,"unitId") && unit.id != cc->unit.id) || (Call::callMaps.contains(key,"unitType") && unit.type != cc->unit.type) || (Call::callMaps.contains(key,"idCmd") && idCmd != cc->idCmd))
 			return false;
 		return true;
 	}
-	
+
 	virtual void filter(const Call *c) {
 		const GetCodePdgCmdCall *cc = dynamic_cast<const GetCodePdgCmdCall*>(c);
-		if (!Call::paramsMap.contains(label,"unitId") && unit.id != cc->unit.id && unit.id != -1)
+		if (!Call::callMaps.contains(key,"unitId") && unit.id != cc->unit.id && unit.id != -1)
 			unit.id = -1;
-		if (!Call::paramsMap.contains(label,"unitType") && unit.type != cc->unit.type && unit.type != -1)
+		if (!Call::callMaps.contains(key,"unitType") && unit.type != cc->unit.type && unit.type != -1)
 			unit.type = -1;
-		if (!Call::paramsMap.contains(label,"idCmd") && idCmd != cc->idCmd && idCmd != -1)
+		if (!Call::callMaps.contains(key,"idCmd") && idCmd != cc->idCmd && idCmd != -1)
 			idCmd = -1;
 	}
-	
+
 	virtual std::pair<int,int> distance(const Call *c) const {
 		const GetCodePdgCmdCall *cc = dynamic_cast<const GetCodePdgCmdCall*>(c);
 		int sc = 0;
@@ -846,7 +1116,7 @@ private:
 			sc++;
 		return std::make_pair<int,int>(sc,2);
 	}
-	
+
 	virtual std::string getParams() const {
 		std::string s = "";
 		s += (unit.id == -1) ? "?" : boost::lexical_cast<std::string>(unit.id);
@@ -856,16 +1126,16 @@ private:
 		s += (idCmd == -1) ? "?" : boost::lexical_cast<std::string>(idCmd);
 		return s;
 	}
-	
+
 	virtual std::string getReadableParams() const {
 		std::string s = "(";
-		s += (TracesAnalyser::units_id_map.find(unit.type) != TracesAnalyser::units_id_map.end()) ? TracesAnalyser::units_id_map.at(unit.type) : "_";
+		s += (Call::units_id_map.find(unit.type) != Call::units_id_map.end()) ? Call::units_id_map.at(unit.type)+" unit" : "_";
 		s += ",";
 		s += (idCmd != -1) ? boost::lexical_cast<std::string>(idCmd) : "_";
 		s += ")";
 		return s;
 	}
-	
+
 	virtual std::vector<std::string> id_wrong_params(Call *c) const {
 		std::vector<std::string> ids;
 		GetCodePdgCmdCall *cc;
@@ -877,50 +1147,50 @@ private:
 			ids.push_back("idCmd");
 		return ids;
 	}
-	
+
 };
 
 class GetNumParamsPdgCmdCall : public Call {
 
 public:
-		
-	GetNumParamsPdgCmdCall(ErrorType error, int unitId, int unitType, int idCmd): Call("PP_Unit_PdgCmd_GetNumParams",error), idCmd(idCmd) {
+
+	GetNumParamsPdgCmdCall(ErrorType error, int unitId, int unitType, int idCmd): Call(CALL_UNIT_PDG_CMD_GET_NUM_PARAM,error), idCmd(idCmd) {
 		unit.id = unitId;
 		unit.type = unitType;
 	}
-	
+
 	GetNumParamsPdgCmdCall(const GetNumParamsPdgCmdCall *c) : Call(c) {
 		unit.id = c->unit.id;
 		unit.type = c->unit.type;
 		idCmd = c->idCmd;
 	}
-	
+
 	virtual Trace::sp_trace clone() const {
 		return boost::make_shared<GetNumParamsPdgCmdCall>(this);
 	}
-	
+
 private:
-		
+
 	CallMisc::Unit unit;
 	int idCmd;
-	
+
 	virtual bool compare(const Call *c) const {
 		const GetNumParamsPdgCmdCall *cc = dynamic_cast<const GetNumParamsPdgCmdCall*>(c);
-		if ((Call::paramsMap.contains(label,"unitId") && unit.id != cc->unit.id) || (Call::paramsMap.contains(label,"unitType") && unit.type != cc->unit.type) || (Call::paramsMap.contains(label,"idCmd") && idCmd != cc->idCmd))
+		if ((Call::callMaps.contains(key,"unitId") && unit.id != cc->unit.id) || (Call::callMaps.contains(key,"unitType") && unit.type != cc->unit.type) || (Call::callMaps.contains(key,"idCmd") && idCmd != cc->idCmd))
 			return false;
 		return true;
 	}
-	
+
 	virtual void filter(const Call *c) {
 		const GetNumParamsPdgCmdCall *cc = dynamic_cast<const GetNumParamsPdgCmdCall*>(c);
-		if (!Call::paramsMap.contains(label,"unitId") && unit.id != cc->unit.id && unit.id != -1)
+		if (!Call::callMaps.contains(key,"unitId") && unit.id != cc->unit.id && unit.id != -1)
 			unit.id = -1;
-		if (!Call::paramsMap.contains(label,"unitType") && unit.type != cc->unit.type && unit.type != -1)
+		if (!Call::callMaps.contains(key,"unitType") && unit.type != cc->unit.type && unit.type != -1)
 			unit.type = -1;
-		if (!Call::paramsMap.contains(label,"idCmd") && idCmd != cc->idCmd && idCmd != -1)
+		if (!Call::callMaps.contains(key,"idCmd") && idCmd != cc->idCmd && idCmd != -1)
 			idCmd = -1;
 	}
-	
+
 	virtual std::pair<int,int> distance(const Call *c) const {
 		const GetNumParamsPdgCmdCall *cc = dynamic_cast<const GetNumParamsPdgCmdCall*>(c);
 		int sc = 0;
@@ -930,7 +1200,7 @@ private:
 			sc++;
 		return std::make_pair<int,int>(sc,2);
 	}
-	
+
 	virtual std::string getParams() const {
 		std::string s = "";
 		s += (unit.id == -1) ? "?" : boost::lexical_cast<std::string>(unit.id);
@@ -940,16 +1210,16 @@ private:
 		s += (idCmd == -1) ? "?" : boost::lexical_cast<std::string>(idCmd);
 		return s;
 	}
-	
+
 	virtual std::string getReadableParams() const {
 		std::string s = "(";
-		s += (TracesAnalyser::units_id_map.find(unit.type) != TracesAnalyser::units_id_map.end()) ? TracesAnalyser::units_id_map.at(unit.type) : "_";
+		s += (Call::units_id_map.find(unit.type) != Call::units_id_map.end()) ? Call::units_id_map.at(unit.type)+" unit" : "_";
 		s += ",";
 		s += (idCmd != -1) ? boost::lexical_cast<std::string>(idCmd) : "_";
 		s += ")";
 		return s;
 	}
-	
+
 	virtual std::vector<std::string> id_wrong_params(Call *c) const {
 		std::vector<std::string> ids;
 		GetNumParamsPdgCmdCall *cc;
@@ -967,48 +1237,48 @@ private:
 class GetParamPdgCmdCall : public Call {
 
 public:
-		
-	GetParamPdgCmdCall(ErrorType error, int unitId, int unitType, int idCmd, int idParam): Call("PP_Unit_PdgCmd_GetParam",error), idCmd(idCmd), idParam(idParam) {
+
+	GetParamPdgCmdCall(ErrorType error, int unitId, int unitType, int idCmd, int idParam): Call(CALL_UNIT_PDG_CMD_GET_PARAM,error), idCmd(idCmd), idParam(idParam) {
 		unit.id = unitId;
 		unit.type = unitType;
 	}
-	
+
 	GetParamPdgCmdCall(const GetParamPdgCmdCall *c) : Call(c) {
 		unit.id = c->unit.id;
 		unit.type = c->unit.type;
 		idCmd = c->idCmd;
 		idParam = c->idParam;
 	}
-	
+
 	virtual Trace::sp_trace clone() const {
 		return boost::make_shared<GetParamPdgCmdCall>(this);
 	}
-	
+
 private:
-		
+
 	CallMisc::Unit unit;
 	int idCmd;
 	int idParam;
-	
+
 	virtual bool compare(const Call *c) const {
 		const GetParamPdgCmdCall *cc = dynamic_cast<const GetParamPdgCmdCall*>(c);
-		if ((Call::paramsMap.contains(label,"unitId") && unit.id != cc->unit.id) || (Call::paramsMap.contains(label,"unitType") && unit.type != cc->unit.type) || (Call::paramsMap.contains(label,"idCmd") && idCmd != cc->idCmd) || (Call::paramsMap.contains(label,"idParam") && idParam != cc->idParam))
+		if ((Call::callMaps.contains(key,"unitId") && unit.id != cc->unit.id) || (Call::callMaps.contains(key,"unitType") && unit.type != cc->unit.type) || (Call::callMaps.contains(key,"idCmd") && idCmd != cc->idCmd) || (Call::callMaps.contains(key,"idParam") && idParam != cc->idParam))
 			return false;
-		return true;	
+		return true;
 	}
-	
+
 	virtual void filter(const Call *c) {
 		const GetParamPdgCmdCall *cc = dynamic_cast<const GetParamPdgCmdCall*>(c);
-		if (!Call::paramsMap.contains(label,"unitId") && unit.id != cc->unit.id && unit.id != -1)
+		if (!Call::callMaps.contains(key,"unitId") && unit.id != cc->unit.id && unit.id != -1)
 			unit.id = -1;
-		if (!Call::paramsMap.contains(label,"unitType") && unit.type != cc->unit.type && unit.type != -1)
+		if (!Call::callMaps.contains(key,"unitType") && unit.type != cc->unit.type && unit.type != -1)
 			unit.type = -1;
-		if (!Call::paramsMap.contains(label,"idCmd") && idCmd != cc->idCmd && idCmd != -1)
+		if (!Call::callMaps.contains(key,"idCmd") && idCmd != cc->idCmd && idCmd != -1)
 			idCmd = -1;
-		if (!Call::paramsMap.contains(label,"idParam") && idParam != cc->idParam && idParam != -1)
+		if (!Call::callMaps.contains(key,"idParam") && idParam != cc->idParam && idParam != -1)
 			idParam = -1;
 	}
-	
+
 	virtual std::pair<int,int> distance(const Call *c) const {
 		const GetParamPdgCmdCall *cc = dynamic_cast<const GetParamPdgCmdCall*>(c);
 		int sc = 0;
@@ -1020,7 +1290,7 @@ private:
 			sc++;
 		return std::make_pair<int,int>(sc,3);
 	}
-	
+
 	virtual std::string getParams() const {
 		std::string s = "";
 		s += (unit.id == -1) ? "?" : boost::lexical_cast<std::string>(unit.id);
@@ -1032,10 +1302,10 @@ private:
 		s += (idParam == -1) ? "?" : boost::lexical_cast<std::string>(idParam);
 		return s;
 	}
-	
+
 	virtual std::string getReadableParams() const {
 		std::string s = "(";
-		s += (TracesAnalyser::units_id_map.find(unit.type) != TracesAnalyser::units_id_map.end()) ? TracesAnalyser::units_id_map.at(unit.type) : "_";
+		s += (Call::units_id_map.find(unit.type) != Call::units_id_map.end()) ? Call::units_id_map.at(unit.type)+" unit" : "_";
 		s += ",";
 		s += (idCmd != -1) ? boost::lexical_cast<std::string>(idCmd) : "_";
 		s += ",";
@@ -1043,7 +1313,7 @@ private:
 		s += ")";
 		return s;
 	}
-	
+
 	virtual std::vector<std::string> id_wrong_params(Call *c) const {
 		std::vector<std::string> ids;
 		GetParamPdgCmdCall *cc;
@@ -1057,7 +1327,7 @@ private:
 			ids.push_back("idParam");
 		return ids;
 	}
-	
-};
 
+};
+*/
 #endif

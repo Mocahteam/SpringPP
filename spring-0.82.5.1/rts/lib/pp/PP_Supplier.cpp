@@ -116,6 +116,7 @@ int PP_Init(){
 			shd.gameOver = segment->find_or_construct<bool>("gameOver")();
 			shd.gamePaused = segment->find_or_construct<bool>("gamePaused")();
 			shd.tracePlayer = segment->find_or_construct<bool>("tracePlayer")();
+			*(shd.tracePlayer) = false; // init trace functionality to false by default
 			shd.timestamp = segment->find_or_construct<int>("timestamp")();
 			const ShMapDataAllocator mapDataAlloc_inst
 				(segment->get_segment_manager());
@@ -208,7 +209,7 @@ int PP_SetTracePlayer() {
 	}
 	// takes mutex
 	boost::interprocess::scoped_lock<ShMutex> lock(*(shd.mutex));
-	// update gamePaused in shared memory
+	// set trace state to true in shared memory
 	*(shd.tracePlayer) = true;
 	// mutex is automatically freed when the bloc ended (thanks "scoped_lock") usefull if exception thrown
 	return 0;
@@ -216,12 +217,12 @@ int PP_SetTracePlayer() {
 
 int PP_UpdateTimestamp(int timestamp) {
 	if (!initialized) {
-		PP_SetError("PP_SetTracePlayer : Prog&Play is not initialized");
+		PP_SetError("PP_UpdateTimestamp : Prog&Play is not initialized");
 		return -1;
 	}
 	// takes mutex
 	boost::interprocess::scoped_lock<ShMutex> lock(*(shd.mutex));
-	// update gamePaused in shared memory
+	// update timestamp in shared memory
 	*(shd.timestamp) = timestamp;
 	// mutex is automatically freed when the bloc ended (thanks "scoped_lock") usefull if exception thrown
 	return 0;
@@ -410,7 +411,7 @@ int PP_IsStored(PP_UnitId unitId){
 	return (shd.units->find(unitId) != shd.units->end());
 }
 
-PP_PendingCommands* PP_GetPendingCommands(void){
+PP_PendingCmds* PP_GetPendingCommands(void){
 	if (!initialized){
 		PP_SetError("PP_GetPendingCommand : PP is not initialized");
 		return NULL;
@@ -418,7 +419,7 @@ PP_PendingCommands* PP_GetPendingCommands(void){
 	// takes mutex
 	boost::interprocess::scoped_lock<ShMutex> lock(*(shd.mutex));
 	// memory allocation
-	PP_PendingCommands *commands = (PP_PendingCommands*) malloc(sizeof(PP_PendingCommands));
+	PP_PendingCmds *commands = (PP_PendingCmds*) malloc(sizeof(PP_PendingCmds));
 	if (commands == NULL){
 		PP_SetError("PP_GetPendingCommand : memory allocation error");
 		return NULL;
@@ -428,7 +429,7 @@ PP_PendingCommands* PP_GetPendingCommands(void){
 		commands->pendingCommand = NULL;
 	else{
 		commands->pendingCommand =
-			(PP_PendingCommand*) malloc(commands->size*sizeof(PP_PendingCommand));
+			(PP_PendingCmd*) malloc(commands->size*sizeof(PP_PendingCmd));
 		if (commands->pendingCommand == NULL){
 			PP_SetError("PP_GetPendingCommand : memory allocation error");
 			free(commands);
@@ -487,7 +488,7 @@ PP_PendingCommands* PP_GetPendingCommands(void){
 	return commands;
 }
 
-void PP_FreePendingCommands(PP_PendingCommands *commands){
+void PP_FreePendingCommands(PP_PendingCmds *commands){
 	// free all commands
 	if (commands != NULL){
 		for (int i = 0 ; i < commands->size ; i++){

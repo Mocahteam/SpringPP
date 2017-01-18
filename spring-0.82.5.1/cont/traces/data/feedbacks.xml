@@ -6,10 +6,10 @@
 				<call label="PP_Close"/>
 			</expert>
 			<infos lang="fr">
-				<info>"PP_Close" doit être la dernière instruction de votre programme.</info>
+				<info>*PP_Close* doit être la dernière instruction de votre programme.</info>
 			</infos>
 			<infos lang="en">
-				<info>"PP_Close" must be the last function called in your program.</info>
+				<info>*PP_Close* must be the last function called in your program.</info>
 			</infos>
 		</feedback>
 		<feedback type="useful_call" priority="500">
@@ -80,10 +80,10 @@
 		</feedback>
 		<feedback type="call_params" priority="2100">
 			<infos lang="fr">
-				<info>Les paramètres donnés à l'appel *learner_call**info* ne semblent pas être les bons :*n**diff_params*</info>
+				<info>Concernant l'appel *learner_call**info* :*n**diff_params*</info>
 			</infos>
 			<infos lang="en">
-				<info>The parameters given to the call *learner_call**info* don't seem to be the correct ones :*n**diff_params*</info>
+				<info>Concerning the call *learner_call**info*:*n**diff_params*</info>
 			</infos>
 		</feedback>
 	</feedbacks>
@@ -147,6 +147,14 @@
 				<info>Check the value of the coalition used as a parameter.</info>
 			</infos>
 		</message>
+		<message id="typeToCheck">
+			<infos lang="fr">
+				<info>Vérifiez le type que vous passez en paramètres.</info>
+			</infos>
+			<infos lang="en">
+				<info>Check the type used as a parameter.</info>
+			</infos>
+		</message>
 		<message id="index">
 			<infos lang="fr">
 				<info>Vérifiez l'index que vous passez en paramètres.</info>
@@ -157,10 +165,10 @@
 		</message>
 		<message id="unitType">
 			<infos lang="fr">
-				<info>Vous ne devriez peut-être pas appeler cette fonction en passant ce type d'unité.</info>
+				<info>Vous ne devriez peut-être pas appeler cette fonction en utilisant une unité de ce type.</info>
 			</infos>
 			<infos lang="en">
-				<info>Maybe you shouldn't call this function with this type of unit.</info>
+				<info>Maybe you shouldn't call this function with a unit of this type.</info>
 			</infos>
 		</message>
 		<message id="groupId">
@@ -197,10 +205,34 @@
 		</message>
 		<message id="param">
 			<infos lang="fr">
-				<info>Vérifiez la valeur du paramètre fourni.</info>
+				<info>Vérifiez la valeur du paramètre.</info>
 			</infos>
 			<infos lang="en">
-				<info>Check the value of the given parameter.</info>
+				<info>Check the value of the parameter.</info>
+			</infos>
+		</message>
+		<message id="param1">
+			<infos lang="fr">
+				<info>Vérifiez la valeur du premier paramètre.</info>
+			</infos>
+			<infos lang="en">
+				<info>Check the value of the first parameter.</info>
+			</infos>
+		</message>
+		<message id="param2">
+			<infos lang="fr">
+				<info>Vérifiez la valeur du second paramètre.</info>
+			</infos>
+			<infos lang="en">
+				<info>Check the value of the second parameter.</info>
+			</infos>
+		</message>
+		<message id="param3">
+			<infos lang="fr">
+				<info>Vérifiez la valeur du troisième paramètre.</info>
+			</infos>
+			<infos lang="en">
+				<info>Check the value of the third parameter.</info>
 			</infos>
 		</message>
 		<message id="idCmd">
@@ -219,7 +251,7 @@
 				<info>Check the id of the parameter given to the function.</info>
 			</infos>
 		</message>
-		<message id="wrong_unit">
+		<message id="unit_not_found">
 			<infos lang="fr">
 				<info>Il semblerait que l'unité que vous passez lors de l'appel *learner_call* n'existe pas. Elle a peut-être été détruite au cours de la mission.</info>
 			</infos>
@@ -227,15 +259,23 @@
 				<info>It seems the unit you passed with the call *learner_call* does not exist. Maybe she has been destroyed during the mission.</info>
 			</infos>
 		</message>
-		<message id="wrong_target">
+		<message id="not_unit_owner">
 			<infos lang="fr">
-				<info>Avec l'appel *learner_call*, vous avez ordonné à une unité d'effectuer une action sur une unité qui n'existe pas.</info>
+				<info>Lors de l'appel *learner_call*, vous tentez de commander une unité qui ne vous appartient pas. Vous vous doutez bien que cela est interdit.</info>
+			</infos>
+			<infos lang="en">
+				<info>With the call *learner_call*, you try to command a unit that is not in your coalition. This is forbidden.</info>
+			</infos>
+		</message>
+		<message id="target_not_found">
+			<infos lang="fr">
+				<info>Lors de l'appel *learner_call*, vous avez ordonné à une unité d'effectuer une action sur une unité qui n'existe pas.</info>
 			</infos>
 			<infos lang="en">
 				<info>With the call *learner_call*, you ordered a unit to execute an action on a unit which does not exist.</info>
 			</infos>
 		</message>
-		<message id="wrong_coalition">
+		<message id="invalid_coalition">
 			<infos lang="fr">
 				<info>Attention à la valeur de coalition que vous passez en paramètres. Seulement trois valeurs sont possibles : MY_COALITION, ALLY_COALITION et ENEMY_COALITION.</info>
 			</infos>
@@ -251,12 +291,20 @@
 				<info>The parameter *out_of_range_param* of the call *learner_call* is out of range.</info>
 			</infos>
 		</message>
-		<message id="wrong_position">
+		<message id="position_out_of_bounds">
 			<infos lang="fr">
 				<info>Avec l'appel *learner_call*, vous avez ordonné à une unité d'effectuer une action en dehors de la carte. Vous vous doutez bien que cela pose problème.</info>
 			</infos>
 			<infos lang="en">
 				<info>With the call *learner_call*, you ordered a unit to execute an action outside the map. It can't work this way.</info>
+			</infos>
+		</message>
+		<message id="invalid_group">
+			<infos lang="fr">
+				<info>Avec l'appel *learner_call*, vous utilisez un numéro de groupe non valide.</info>
+			</infos>
+			<infos lang="en">
+				<info>With the call *learner_call*, you use an invalid group number.</info>
 			</infos>
 		</message>
 	</messages>

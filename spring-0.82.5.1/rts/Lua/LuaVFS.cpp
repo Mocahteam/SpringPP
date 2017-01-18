@@ -506,22 +506,22 @@ int LuaVFS::ZlibDecompress(lua_State* L)
 int LuaVFS::BuildPPEditor(lua_State* L) {
 	// Get LUA args
 	const string game = luaL_checkstring(L, 1);
-	
+
 	// Prepare file
-	const string modinfo = "return { game='SPRED', shortGame='SPRED', name='SPRED for " + game + "', shortName='SPRED', mutator='official', version='1.0', description='SPRED Editor.', url='http://www.irit.fr/ProgAndPlay/index_en.php', modtype=1, depend= { \"" + game + "\" },}";
+	const string modinfo = "return { game='SPRED for " + game + "', shortGame='SPRED for " + game + "', name='SPRED for " + game + "', shortName='SPRED for " + game + "', mutator='official', version='1.0', description='SPRED module. SPRED for " + game + ".', url='http://www.irit.fr/ProgAndPlay/index_en.php', modtype=1, depend= { \"" + game + "\" },}";
 	const string editorName = "mods/SPRED for " + game + ".sdz";
-	
+
 	// Locate launcher zip
-	const string launcherPath = filesystem.LocateFile("mods/SPRED.sdz");
-	
+	const string launcherPath = filesystem.LocateFile("mods/SPRED_Launcher.sdz");
+
 	// Open launcher zip
 	unzFile launcherZip = unzOpen(launcherPath.c_str());
-	if (launcherZip == NULL) { luaL_error(L, "Couldn't load SPRED.sdz"); return 0; }
-	
+	if (launcherZip == NULL) { luaL_error(L, "Couldn't load SPRED_Launcher.sdz"); return 0; }
+
 	// Open editor zip file
 	if (UNZ_OK != unzLocateFile(launcherZip, "editor.sdz", 2)) { luaL_error(L, "Couldn't find editor.sdz"); return 0; }
 	if (UNZ_OK != unzOpenCurrentFile(launcherZip)) { luaL_error(L, "Couldn't open editor.sdz"); return 0; }
-	
+
 	// Extract editor zip
 	const int sizeBuffer = 32768;
 	char* buffer = new char[sizeBuffer];
@@ -534,13 +534,13 @@ int LuaVFS::BuildPPEditor(lua_State* L) {
 		delete[] buffer;
 		buffer = NULL;
 	}
-	
+
 	// Close editor zip file
 	unzCloseCurrentFile(launcherZip);
-	
+
 	// Close launcher zip
 	unzClose(launcherZip);
-	
+
 	// Initialize file information (to prevent bugs)
 	zip_fileinfo* zipfi = new zip_fileinfo();
 	zipfi->dosDate = 0;
@@ -550,75 +550,80 @@ int LuaVFS::BuildPPEditor(lua_State* L) {
 	zipfi->tmz_date.tm_hour = 10;
 	zipfi->tmz_date.tm_min = 30;
 	zipfi->tmz_date.tm_sec = 24;
-	
+
 	// Locate editor zip
 	const string editorPath = filesystem.LocateFile(editorName.c_str());
-	
+
 	// Open editor zip
 	zipFile editorZip = zipOpen(editorPath.c_str(), APPEND_STATUS_ADDINZIP); // Warning : if the zip file is empty, returns NULL
 	if (editorZip == NULL) { luaL_error(L, "Couldn't load extracted archive"); return 0; }
-	
+
 	// Write file
 	zipOpenNewFileInZip(editorZip, "ModInfo.lua", zipfi, NULL, 0, NULL, 0, NULL, Z_DEFLATED, Z_BEST_COMPRESSION);
 	zipWriteInFileInZip(editorZip, modinfo.c_str(), modinfo.length());
 	zipCloseFileInZip(editorZip);
-	
+
 	// Close editor zip
 	zipClose(editorZip, NULL);
-	
+
 	return 0;
 }
 
 int LuaVFS::BuildPPGame(lua_State* L) {
 	// Get LUA args
-	const string name = luaL_checkstring(L, 1);
-	const string desc = luaL_checkstring(L, 2);
-	const string scenarioFileName = luaL_checkstring(L, 3);
-	const string gameName = luaL_checkstring(L, 4);
-	const string game = luaL_checkstring(L, 5);
+	const string editorName = luaL_checkstring(L, 1);
+	const string name = luaL_checkstring(L, 2);
+	const string desc = luaL_checkstring(L, 3);
+	const string scenarioFileName = luaL_checkstring(L, 4);
+	const string gameName = luaL_checkstring(L, 5);
+	const string game = luaL_checkstring(L, 6);
 	vector<string> levelList;
-	for (lua_pushnil(L) ; lua_next(L, 6) != 0 ; lua_pop(L, 1)) {
+	for (lua_pushnil(L) ; lua_next(L, 7) != 0 ; lua_pop(L, 1)) {
 		levelList.push_back(luaL_checkstring(L, -1));
 	}
 	vector<string> tracesList;
-	for (lua_pushnil(L) ; lua_next(L, 7) != 0 ; lua_pop(L, 1)) {
+	for (lua_pushnil(L) ; lua_next(L, 8) != 0 ; lua_pop(L, 1)) {
 		tracesList.push_back(luaL_checkstring(L, -1));
 	}
-	
+
 	// Prepare file
-	const string modinfo = "return { game='SPRED', shortGame='SPRED', name='" + name + "', shortName='SPRED', mutator='official', version='1.0', description='" + desc + "', url='http://www.irit.fr/ProgAndPlay/index_en.php', modtype=1, depend= { \"" + game + "\" },}";
+	const string modinfo = "return { game='" + name + "', shortGame='" + name + "', name='" + name + "', shortName='" + name + "', mutator='official', version='1.0', description='SPRED module. " + desc + "', url='http://www.irit.fr/ProgAndPlay/index_en.php', modtype=1, depend= { \"" + game + "\" },}";
 	const string gameFileName = "mods/" + gameName + ".sdz";
-	
-	// Locate launcher zip
-	const string launcherPath = filesystem.LocateFile("mods/SPRED.sdz");
-	
-	// Open launcher zip
-	unzFile launcherZip = unzOpen(launcherPath.c_str());
-	if (launcherZip == NULL) { luaL_error(L, "Couldn't load SPRED.sdz"); return 0; }
-	
+
+	// Locate editor zip
+	const string editorPath = filesystem.LocateFile("mods/" + editorName + ".sdz");
+
+	// Open editor zip
+	unzFile editorZip = unzOpen(editorPath.c_str());
+	if (editorZip == NULL) {
+		std::string msg = "Couldn't load \"" + editorName + ".sdz\"";
+		luaL_error(L, msg.c_str());
+		return 0;
+	}
+
 	// Open game zip file
-	if (UNZ_OK != unzLocateFile(launcherZip, "game.sdz", 2)) { luaL_error(L, "Couldn't find game.sdz"); return 0; }
-	if (UNZ_OK != unzOpenCurrentFile(launcherZip)) { luaL_error(L, "Couldn't open game.sdz"); return 0; }
-	
+	if (UNZ_OK != unzLocateFile(editorZip, "game.sdz", 2)) { luaL_error(L, "Couldn't find game.sdz"); return 0; }
+	if (UNZ_OK != unzOpenCurrentFile(editorZip)) { luaL_error(L, "Couldn't open game.sdz"); return 0; }
+
 	// Extract game zip
 	const int sizeBuffer = 32768;
 	char* buffer = new char[sizeBuffer];
 	::memset(buffer, 0, sizeBuffer);
 	std::ofstream outfile(gameFileName.c_str(), std::ofstream::binary);
-	while(unzReadCurrentFile(launcherZip, buffer, sizeBuffer) > 0) {
+	while(unzReadCurrentFile(editorZip, buffer, sizeBuffer) > 0) {
 		outfile.write(buffer, sizeBuffer);
 	}
 	if (buffer) {
 		delete[] buffer;
 		buffer = NULL;
 	}
-	
+
 	// Close game zip file
-	unzCloseCurrentFile(launcherZip);
-	
+	unzCloseCurrentFile(editorZip);
+
 	// Close launcher zip
-	unzClose(launcherZip);
-	
+	unzClose(editorZip);
+
 	// Initialize file information (to prevent bugs)
 	zip_fileinfo* zipfi = new zip_fileinfo();
 	zipfi->dosDate = 0;
@@ -628,14 +633,14 @@ int LuaVFS::BuildPPGame(lua_State* L) {
 	zipfi->tmz_date.tm_hour = 10;
 	zipfi->tmz_date.tm_min = 30;
 	zipfi->tmz_date.tm_sec = 24;
-	
+
 	// Locate game zip
 	const string gamePath = filesystem.LocateFile(gameFileName.c_str());
-	
+
 	// Open game zip
 	zipFile gameZip = zipOpen(gamePath.c_str(), APPEND_STATUS_ADDINZIP);
 	if (gameZip == NULL) { luaL_error(L, "Couldn't load extracted archive"); return 0; }
-	
+
 	// Write files
 	// ModInfo
 	zipOpenNewFileInZip(gameZip, "ModInfo.lua", zipfi, NULL, 0, NULL, 0, NULL, Z_DEFLATED, Z_BEST_COMPRESSION);
@@ -687,10 +692,10 @@ int LuaVFS::BuildPPGame(lua_State* L) {
 		zipWriteInFileInZip(gameZip, fbString.c_str(), fbString.length());
 		zipCloseFileInZip(gameZip);
 	}
-	
+
 	// Close game zip
 	zipClose(gameZip, NULL);
-	
+
 	return 0;
 }
 
@@ -739,7 +744,7 @@ int LuaVFS::GetArchiveInfo(lua_State* L) {
 	const std::string archiveName = luaL_checkstring(L, 1);
 	CArchiveScanner::ArchiveData archiveData = archiveScanner->GetArchiveData(archiveName);
 	lua_createtable(L, 0, 9);
-	
+
 	lua_pushstring(L, "name");
 	lua_pushstring(L, archiveData.name.c_str());
 	lua_rawset(L, -3);
@@ -891,4 +896,3 @@ int LuaVFS::UnpackF32(lua_State* L) { return UnpackType<float>(L);           }
 
 /******************************************************************************/
 /******************************************************************************/
-

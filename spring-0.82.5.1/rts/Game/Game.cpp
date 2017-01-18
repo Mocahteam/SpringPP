@@ -2786,14 +2786,12 @@ bool CGame::Update()
 
 	const unsigned difTime = (timeNow - lastModGameTimeMeasure);
 	const float dif = skipping ? 0.010f : (float)difTime * 0.001f;
-	
-	// Meresse
-	gu->PP_modGameTime += dif * gs->speedFactor;
-	pp->UpdateTimestamp();
-	//
 
 	if (!gs->paused) {
 		gu->modGameTime += dif * gs->speedFactor;
+		// Meresse
+		pp->UpdateTimestamp();
+		//
 	}
 
 	gu->gameTime += dif;
@@ -3326,7 +3324,7 @@ bool CGame::Draw() {
 			float drawPercent = (float)luaDrawTime / 10.0f;
 			char buf[32];
 			SNPRINTF(buf, sizeof(buf), "LUA-DRAW(MT): %2.0f%%", drawPercent);
-			float4 warncol(drawPercent >= 10.0f && (currentTime & 128) ? 
+			float4 warncol(drawPercent >= 10.0f && (currentTime & 128) ?
 				0.5f : std::max(0.0f, std::min(drawPercent / 5.0f, 1.0f)), std::max(0.0f, std::min(2.0f - drawPercent / 5.0f, 1.0f)), 0.0f, 1.0f);
 			smallFont->SetColors(&warncol, NULL);
 			smallFont->glPrint(0.99f, 0.88f, 1.0f, font_options, buf);
@@ -3369,16 +3367,16 @@ bool CGame::Draw() {
 							prefix = "E";	//no alliance at all
 						}
 					}
-					float4 cpucolor(!p->spectator && p->cpuUsage > 0.75f && gs->speedFactor < gs->userSpeedFactor * 0.99f && 
-						(currentTime & 128) ? 0.5f : std::max(0.01f, std::min(1.0f, p->cpuUsage * 2.0f / 0.75f)), 
+					float4 cpucolor(!p->spectator && p->cpuUsage > 0.75f && gs->speedFactor < gs->userSpeedFactor * 0.99f &&
+						(currentTime & 128) ? 0.5f : std::max(0.01f, std::min(1.0f, p->cpuUsage * 2.0f / 0.75f)),
 							std::min(1.0f, std::max(0.01f, (1.0f - p->cpuUsage / 0.75f) * 2.0f)), 0.01f, 1.0f);
 					int ping = (int)(((p->ping) * 1000) / (GAME_SPEED * gs->speedFactor));
 					float4 pingcolor(!p->spectator && gc->reconnectTimeout > 0 && ping > 1000 * gc->reconnectTimeout &&
-							(currentTime & 128) ? 0.5f : std::max(0.01f, std::min(1.0f, (ping - 250) / 375.0f)), 
+							(currentTime & 128) ? 0.5f : std::max(0.01f, std::min(1.0f, (ping - 250) / 375.0f)),
 							std::min(1.0f, std::max(0.01f, (1000 - ping) / 375.0f)), 0.01f, 1.0f);
 					SNPRINTF(buf, sizeof(buf), "\xff%c%c%c%c \t%i \t%s   \t\xff%c%c%c%s   \t\xff%c%c%c%.0f%%  \t\xff%c%c%c%dms",
 							allycolor[0], allycolor[1], allycolor[2], (gu->spectating && !p->spectator && (gu->myTeam == p->team)) ? '-' : ' ',
-							p->team, prefix.c_str(), color[0], color[1], color[2], p->name.c_str(), 
+							p->team, prefix.c_str(), color[0], color[1], color[2], p->name.c_str(),
 							(unsigned char)(cpucolor[0] * 255.0f), (unsigned char)(cpucolor[1] * 255.0f), (unsigned char)(cpucolor[2] * 255.0f),
 							p->cpuUsage * 100.0f,
 							(unsigned char)(pingcolor[0] * 255.0f), (unsigned char)(pingcolor[1] * 255.0f), (unsigned char)(pingcolor[2] * 255.0f),
@@ -3865,7 +3863,7 @@ void CGame::ClientReadNet()
 					AddTraffic(player, packetCode, dataLength);
 				} catch (netcode::UnpackPacketException &e) {
 					logOutput.Print("Got invalid PlayerName: %s", e.err.c_str());
-				}	
+				}
 				break;
 			}
 
@@ -3890,7 +3888,7 @@ void CGame::ClientReadNet()
 					AddTraffic(-1, packetCode, dataLength);
 				} catch (netcode::UnpackPacketException &e) {
 					logOutput.Print("Got invalid SystemMessage: %s", e.err.c_str());
-				}	
+				}
 				break;
 			}
 

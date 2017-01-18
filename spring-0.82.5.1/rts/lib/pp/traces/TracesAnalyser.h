@@ -28,6 +28,7 @@
 #include "Sequence.h"
 #include "Event.h"
 #include "EventDef.h"
+#include "TraceConstantList.h"
 
 /**
   * valeur comprise dans l'intervalle [0,1] utilisée pour déterminer si l'on doit créer un feedback de type TracesAnalyser::FeedbackType::USELESS_CALL
@@ -56,7 +57,7 @@
   * 	- un feedback avec une priorité à 0
   *	    - un feedback avec une priorité à 1
   *		- le nombre de dégradations autorisé est à 0
-  *		
+  *
   *		-> On ne retourne que le premier feedback.
   */
 #define NUM_DOWNGRADS 2
@@ -64,7 +65,7 @@
 /**
   * Valeur comprise dans l'intervalle [0,1] correspondant au pourcentage de labels à afficher au joueur dans le cas d'un feedback de type TracesAnalyser::FeedbackType::SEQ_LACK.
   *
-  * Si la valeur est à 1, on affichera donc l'ensemble des labels des appels utilisés dans la séquence.   
+  * Si la valeur est à 1, on affichera donc l'ensemble des labels des appels utilisés dans la séquence.
   */
 #define SEQ_LACK_INFO_RATIO 1
 
@@ -92,11 +93,11 @@
 
 /**
   * \class TracesAnalyser
-  * 
-  * \brief La classe TracesAnalyser définit l'ensemble des traitements relatifs à l'analyse des traces. 
+  *
+  * \brief La classe TracesAnalyser définit l'ensemble des traitements relatifs à l'analyse des traces.
   */
 class TracesAnalyser {
-	
+
 public:
 
 	typedef std::vector< std::pair<int,int> > path;
@@ -123,11 +124,11 @@ public:
 		  */
 		SEQ_LACK,
 		/**
-		  * L'attribut de la séquence experte Sequence::num_fixed est à true. La séquence experte est alignée avec une séquence présente dans les traces du joueur. Les deux séquences se trouvent sous la racine. Les indices des deux séquences diffèrent. 
+		  * L'attribut de la séquence experte Sequence::num_fixed est à true. La séquence experte est alignée avec une séquence présente dans les traces du joueur. Les deux séquences se trouvent sous la racine. Les indices des deux séquences diffèrent.
 		  */
 		IND_SEQ_NUM,
 		/**
-		  * L'attribut de la séquence experte Sequence::num_fixed est à true. La séquence experte est alignée avec une séquence présente dans les traces du joueur. La distance entre les deux ensembles d'indices est supérieure au seuil défini par DIST_SEQ_NUM_THRES. 
+		  * L'attribut de la séquence experte Sequence::num_fixed est à true. La séquence experte est alignée avec une séquence présente dans les traces du joueur. La distance entre les deux ensembles d'indices est supérieure au seuil défini par DIST_SEQ_NUM_THRES.
 		  */
 		DIST_SEQ_NUM,
 		/**
@@ -143,75 +144,60 @@ public:
 		  */
 		CALL_PARAMS
 	};
-	
+
 	/**
 	  * Tableau contenant les chaînes de caractères associées aux différents types de feedback.
 	  */
 	static const char* feedbackTypesArr[];
-	
-	/**
-	  * Objet permettant de récupérer la chaîne de caractères associée au code du type d'unité. Ces codes sont définis dans le fichier constantList_KP4.4.h.
-	  */
-	static std::map<int,std::string> units_id_map;
-	
-	/**
-	  * Objet permettant de récupérer la chaîne de caractères associée au code du type d'ordre. Ces codes sont définis dans le fichier constantList_KP4.4.h.
-	  */
-	static std::map<int,std::string> orders_map;
-	
-	/**
-	  * Objet permettant de récupérer la chaîne de caractères associée au code du type de ressource. Ces codes sont définis dans le fichier constantList_KP4.4.h.
-	  */
-	static std::map<int,std::string> resources_map;
-	
+
 	/**
 	  * Objet permettant d'associer un message (qui pourra être utilisé pour le retour donné au joueur) à un identifiant.
 	  */
 	static std::map<std::string,std::string> messages_map;
-	
+
 	/**
 	  * Structure utilisée pour contenir un ensemble d'informations sur un retour qui pourrait être donné au joueur.
 	  */
 	struct Feedback {
-		
+
 		/**
 		 * Définition du type du feedback. Ce champ est obligatoire dans le fichier XML de définition de feedbacks.
 		 *
 		 * \see FeedbackType
 		 */
 		FeedbackType type;
-		
+
 		/**
 		  * Chaîne de caractères contenant le texte associé au feedback. Défini par la balise \<info\> dans un fichier XML de définition de feedbacks.
-		  *	A noter que la balise \<infos lang="..."\> doit contenir au moins une balise \<info\> pour la langue choisie. 
+		  *	A noter que la balise \<infos lang="..."\> doit contenir au moins une balise \<info\> pour la langue choisie.
 		  */
 		std::string info;
-		
+
 		/**
 		  * Trace de l'apprenant pour ce feedback. Défini par la balise \<learner\> dans un fichier XML de définition de feedbacks.
 		  */
 		Trace::sp_trace learner_spt;
-		
+
 		/**
 		  * Trace de l'expert défini pour ce feedback. Défini par la balise \<expert\> dans un fichier XML de définition de feedbacks.
 		  */
 		Trace::sp_trace expert_spt;
-		
+
 		/**
 		  * Priorité associée au feedback. Ce champ est obligatoire dans le fichier XML de définition de feedbacks.
 		  */
 		int priority;
-		
+
 		/**
 		 * Variable prenant la valeur de l'attribut 'level' associé à la balise \<feedback\> dans le fichier XML de définition de feedbacks. Cet attribut est optionnel. S'il n'est pas défini, cette variable prend la valeur -1 et ne sera pas utilisée lors de l'analyse. Dans le cas, où il est défini, sa valeur est utilisée pour associer un niveau aux traces \p learner_spt et \p expert_spt.
 		 */
 		int level;
-		
+
 		/**
 		  * Booléen mis à vrai si un pattern a été défini pour le feedback dans le fichier XML de définition de feedbacks, i.e. si learner_spt OU (non exclusif) expert_spt est défini.
 		  */
 		bool defined;
-		
+
 		/**
 		  * \brief Fonction utilisé lors de l'opération de tri des feedbacks listés.
 		  *
@@ -221,7 +207,7 @@ public:
 		bool operator<(const Feedback& f) const {
 			return priority < f.priority || (learner_spt && f.learner_spt && learner_spt->getLevel() < f.learner_spt->getLevel()) || (expert_spt && f.expert_spt && expert_spt->getLevel() < f.expert_spt->getLevel()) || (defined && !f.defined);
 		}
-		
+
 		/**
 		  * \brief Affichage du feedback.
 	      *
@@ -248,53 +234,53 @@ public:
 	  * Structure utilisée pour contenir un ensemble d'informations sur une trace compressée.
 	  */
 	struct GameInfos {
-		
+
 		/**
 		  * Pointeur vers l'objet Event modélisant le lancement de la mission.
 		  */
 		StartMissionEvent *sme;
-		
+
 		/**
 		  * Pointeur vers l'objet Event modélisant la fin de la mission.
 		  */
 		EndMissionEvent *eme;
-		
+
 		/**
 		  * Pointeur vers l'objet Event modélisant le lancement d'une exécution.
 		  */
 		NewExecutionEvent *nee;
-		
+
 		/**
 		  * Pointeur vers l'objet Event modélisant la fin d'une exécution.
 		  */
 		EndExecutionEvent *eee;
-		
+
 		/**
 		  * Vecteur de traces contenant l'ensemble des traces générées durant une mission, i.e. un ensemble d'exécutions.
 		  */
 		std::vector<Trace::sp_trace> mission_traces;
-		
+
 		/**
-		  * Objet Sequence correspondant à une séquence racine (son indice est donc <1:1>) dont le vecteur contient l'ensemble des traces relatives à une exécution. Ce sont ces traces qui seront analysées pour calculer le score du joueur et pour déterminer le retour à lui donner.   
+		  * Objet Sequence correspondant à une séquence racine (son indice est donc <1:1>) dont le vecteur contient l'ensemble des traces relatives à une exécution. Ce sont ces traces qui seront analysées pour calculer le score du joueur et pour déterminer le retour à lui donner.
 		  *
 		  */
 		Sequence::sp_sequence root_sps;
-		
+
 		/**
 		  * \brief Constructeur de GameInfos
 		  */
 		GameInfos() : sme(NULL), eme(NULL), nee(NULL), eee(NULL) {}
-		
+
 		/**
 		  * \brief Réinitialise toutes les informations de l'objet GameInfos.
 		  */
-		void clearMission() { 
+		void clearMission() {
 			sme = NULL;
 			eme = NULL;
 			mission_traces.clear();
 			clearExecution();
 		}
-		
+
 		/**
 		  * \brief Réinitialise toutes les informations relatives à une exécution.
 		  */
@@ -303,7 +289,7 @@ public:
 			eee = NULL;
 			root_sps.reset();
 		}
-		
+
 		/**
 		  * \brief Calcul du temps de résolution de la mission.
 		  *
@@ -317,7 +303,7 @@ public:
 				time = eme->getEndTime() - sme->getStartTime();
 			return time;
 		}
-		
+
 		/**
 		  * \brief Calcul du temps d'exécution du programme de résolution de la mission.
 		  *
@@ -331,7 +317,7 @@ public:
 				time = eee->getEndTime() - nee->getStartTime();
 			return time;
 		}
-		
+
 		/**
 		  * \brief Calcul du nombre d'exécutions lancées par le joueur pour résoudre une mission.
 		  *
@@ -340,12 +326,12 @@ public:
 		int getNumExecutions() {
 			int num = 0;
 			for (unsigned int i = 0; i < mission_traces.size(); i++) {
-				if (mission_traces.at(i)->isEvent() && dynamic_cast<Event*>(mission_traces.at(i).get())->getLabel().compare("new_execution") == 0)
+				if (mission_traces.at(i)->isEvent() && dynamic_cast<Event*>(mission_traces.at(i).get())->getLabel().compare(NEW_EXECUTION) == 0)
 					num++;
 			}
 			return num;
 		}
-		
+
 		/**
 		  * \brief Calcul du temps moyen d'attente entre deux exécutions.
 		  *
@@ -361,7 +347,7 @@ public:
 			for (unsigned int i = 0; i < mission_traces.size(); i++) {
 				if (mission_traces.at(i)->isEvent()) {
 					Event *e = dynamic_cast<Event*>(mission_traces.at(i).get());
-					if (e->getLabel().compare("new_execution") == 0) {
+					if (e->getLabel().compare(NEW_EXECUTION) == 0) {
 						if (!in) {
 							in = true;
 							cpt++;
@@ -373,7 +359,7 @@ public:
 						else
 							return -1;
 					}
-					else if (e->getLabel().compare("end_execution") == 0) {
+					else if (e->getLabel().compare(END_EXECUTION) == 0) {
 						in = false;
 						eee = dynamic_cast<EndExecutionEvent*>(e);
 					}
@@ -383,7 +369,7 @@ public:
 				return -1;
 			return avg / cpt;
 		}
-		
+
 	};
 
 	/**
@@ -402,12 +388,11 @@ public:
 	  * \param experts_xml un vecteur de chaînes de caractères contenant les traces compressées provenant des exécutions des solutions expertes au format XML.
 	  * \param ind_mission l'indice de l'occurrence de la mission à considérer parmi toutes celles se trouvant dans la trace compressée du joueur. Par défaut, la dernière est celle choisie.
 	  * \param ind_execution l'indice de l'exécution à considérer parmi toutes celles contenues dans l'occurrence de la mission selectionnée. Par défaut, la dernière est celle choisie.
-	  * \param os le flux de sortie utilisé pour l'affichage.
 	  *
 	  * \return une chaîne de caractères contenant le feedback pour le joueur au format JSON.
 	  */
-	std::string constructFeedback(const std::string& learner_xml, const std::vector<std::string>& experts_xml, int ind_mission = -1, int ind_execution = -1, std::ostream &os = std::cout);
-	
+	std::string constructFeedback(const std::string& learner_xml, const std::vector<std::string>& experts_xml, int ind_mission = -1, int ind_execution = -1);
+
 	/**
 	  * \brief Chargement des feedbacks et des messages contenus dans les fichiers XML 'feedbacks.xml'.
 	  *
@@ -415,26 +400,26 @@ public:
 	  * \param mission_feedbacks_xml la chaîne de caractères correspondant au contenu du fichier 'feedbacks.xml' spécifique pour la mission considérée. Cette chaîne doit permettre de charger les feedbacks définis pour la mission. Cette chaîne peut être vide car ces feedbacks ne sont pas obligatoires.
 	  */
 	void loadXmlInfos(const std::string& feedbacks_xml, const std::string& mission_feedbacks_xml);
-	
+
 	/**
 	  * \brief Setter pour la variable \p endless_loop.
 	  *
 	  * \param endless_loop la nouvelle valeur du champ \p endless_loop.
 	  */
 	void setEndlessLoop(bool endless_loop);
-	
+
 	/**
 	  * \brief Setter pour la variable \p lang.
 	  *
 	  * \param lang la nouvelle valeur du champ \p lang.
 	  */
 	void setLang(std::string lang);
-	
+
 	/**
 	  * \brief Génération aléatoire d'un entier compris dans l'intervalle [0,max[.
 	  */
 	static int getRandomIntInRange(int max);
-	
+
 	/**
 	  * \brief Test d'appartenance de \p type à un ensemble de valeurs.
 	  *
@@ -447,48 +432,48 @@ public:
 	  * \return vrai si la valeur de \p type appartient à l'ensemble, et faux sinon.
 	  */
 	static bool feedbackTypeIn(FeedbackType type, int n, ...);
-	
+
 	/**
 	  * \brief Test si la valeur de \p type est égale à l'une des valeurs suivantes : USEFUL_CALL, SEQ_LACK, DIST_SEQ_NUM, IND_SEQ_NUM, CALL_LACK, CALL_PARAMS.
 	  *
 	  * \return vrai si c'est le cas, et faux sinon.
 	  */
 	static bool isExpertRelatedFeedback(FeedbackType type);
-	
+
 	/**
 	  * \brief Test si la valeur de \p type est égale à l'une des valeurs suivantes : USELESS_CALL, SEQ_EXTRA, DIST_SEQ_NUM, IND_SEQ_NUM, CALL_EXTRA, CALL_PARAMS.
 	  *
 	  * \return vrai si c'est le cas, et faux sinon.
 	  */
 	static bool isLearnerRelatedFeedback(FeedbackType type);
-	
+
 private:
 
 	/**
 	  * Booléen mis à vrai si une boucle infinie est détectée dans le programme du joueur.
 	  */
 	bool endless_loop;
-	
+
 	/**
 	  * Booléen mis à vrai lorsque les feedbacks de référence par défaut (ceux qui sont non spécifiques à une mission) ont bien été chargés.
 	  */
 	bool loaded;
-	
+
 	/**
 	  * La langue qui sera utilisée pour le retour d'informations.
 	  */
 	std::string lang;
-	
+
 	/**
 	  * Objet GameInfos utilisé pour traiter la trace compressée du joueur.
 	  */
 	GameInfos learner_gi;
-	
+
 	/**
 	  * Objet GameInfos utilisé pour traiter la trace compressée de l'expert.
 	  */
 	GameInfos expert_gi;
-	
+
 	/**
 	  * Vecteur d'objets Feedback contenant les feedbacks globaux et les feedbacks issus de l'alignement des traces du joueur avec celle de l'expert sélectionné.
 	  *
@@ -496,19 +481,19 @@ private:
 	  * \see TracesAnalyser::listGlobalFeedbacks
 	  */
 	std::vector<Feedback> feedbacks;
-	
+
 	/**
 	  * Vecteur d'objets Feedback contenant les feedbacks de référence par défaut (ceux qui sont non spécifiques à une mission) et les feedbacks de référence définis pour une mission particulière.
 	  */
 	std::vector<Feedback> ref_feedbacks;
-	
+
 	/**
 	  * Objet liant le label de chaque appel utilisé par au moins un expert avec la proportion d'experts ayant utilisé cet appel.
 	  *
 	  * \see TracesAnalyser::listGlobalFeedbacks
 	  */
 	std::map<std::string,double> experts_calls_freq;
-	
+
 	/**
 	  * \brief Importation des feedbacks de référence.
 	  *
@@ -517,7 +502,7 @@ private:
 	  * \param doc objet modélisant le document XML contenant les feedbacks de référence.
 	  */
 	void importFeedbacksFromXml(rapidxml::xml_document<> *doc);
-	
+
 	/**
 	  * \brief Importation des messages.
 	  *
@@ -526,7 +511,7 @@ private:
 	  * \param doc objet modélisant le document XML contenant les messages à importer.
 	  */
 	void importMessagesFromXml(rapidxml::xml_document<> *doc);
-	
+
 	/**
 	  * \brief Récupération des traces spécifiques à une occurrence de mission à partir d'une trace complète.
 	  *
@@ -539,27 +524,27 @@ private:
 	  * \return vrai si des informations sur l'occurrence de la mission indiquée ont été passées à \p gi, et faux sinon.
 	  */
 	bool getInfosOnMission(const std::vector<Trace::sp_trace>& traces, GameInfos& gi, int ind_mission = -1);
-	
+
 	/**
 	  * \brief Récupération des traces spécifiques à une occurrence d'exécution à partir des traces correspondantes à un ensemble d'exécutions.
 	  *
 	  * Cette fonction permet de modifier \p gi pour y conserver les informations sur l'occurrence d'exécution choisie, i.e. l'événement de lancement d'une nouvelle exécution (NewExecutionEvent), les traces spécifiques à cette exécution (que l'on place dans le vecteur d'une séquence racine), et éventuellement l'événement de fin d'exécution (EndExecutionEvent) si celui-ci est présent.
 	  *
 	  * \param gi l'objet GameInfos à modifier et à partir duquel sont récupérées les traces spécifiques à la mission courante.
-	  * \param ind_execution l'indice de l'exécution à considérer parmi toutes celles contenues dans l'occurrence de la mission selectionnée. Par défaut, la dernière est celle choisie. 
+	  * \param ind_execution l'indice de l'exécution à considérer parmi toutes celles contenues dans l'occurrence de la mission selectionnée. Par défaut, la dernière est celle choisie.
 	  *
 	  * \return vrai si des informations sur l'occurrence de l'exécution indiquée ont été passées à \p gi, et faux sinon.
 	  */
 	bool getInfosOnExecution(GameInfos& gi, int ind_execution = -1);
-	
+
 	/**
 	  * \brief Insertion de séquences implicites dans une séquence.
 	  *
 	  * Cette fonction permet d'ajouter (si besoin est) des séquences implicites dans la séquence \p mod_sps en se basant sur la séquence \p ref_sps. Ces séquences sont nécessaires lors de la phase d'alignement des traces si l'on souhaite pouvoir aligner toutes les traces qui doivent l'être.
 	  *
-	  * Exemple : 
+	  * Exemple :
 	  *
-	  * mod_sps : 
+	  * mod_sps :
 	  * 	root
 	  *			A
 	  *			B
@@ -575,7 +560,7 @@ private:
 	  *
 	  * Une séquence implicite est ajoutée dans mod_sps :
 	  *
-	  *  mod_sps : 
+	  *  mod_sps :
 	  * 	root
 	  *			Sequence<1:1>
 	  *				A
@@ -589,7 +574,7 @@ private:
 	  * \param ref_sps la séquence sur laquelle on se base pour ajouter les séquences implicites dans \p mod_sps.
 	  */
 	bool addImplicitSequences(Sequence::sp_sequence& mod_sps, Sequence::sp_sequence& ref_sps) const;
-	
+
 	/**
 	  * \brief Récupération d'un ensemble de patterns d'appels dans une séquence.
 	  *
@@ -603,7 +588,7 @@ private:
 	  * \return le vecteur contenant les patterns d'appels trouvés dans \p mod_sps.
 	  */
 	std::vector<Call::call_vector> getPatterns(const Sequence::sp_sequence& mod_sps, const Call::call_vector& pattern) const;
-	
+
 	/**
 	  * \brief Récupération du premier parent commun.
 	  *
@@ -614,7 +599,7 @@ private:
 	  * \return la séquence contenant l'ensemble des appels contenus dans \p pattern et de plus haut niveau dans la hiérarchie de traces.
 	  */
 	const Sequence::sp_sequence getClosestCommonParent(const Call::call_vector& pattern) const;
-	
+
 	/**
 	  * \brief Calcul du meilleur alignement possible entre deux vecteurs de traces.
 	  *
@@ -627,16 +612,15 @@ private:
 	  * \return un couple (gs,nv) où gs est le score de similarité brut (non normalisé) obtenu à partir du meilleur alignement trouvé et nv est la valeur de normalisation qui doit être utilisée pour ramener ce score dans l'intervalle [0,1].
 	  */
 	std::pair<double,double> findBestAlignment(const std::vector<Trace::sp_trace>& l, const std::vector<Trace::sp_trace>& e, bool align = true) const;
-	
+
 	/**
 	  * \brief Affichage de l'alignement trouvé entre deux vecteurs de traces.
 	  *
 	  * \param l un vecteur de traces correspondant à l'apprenant.
 	  * \param e un vecteur de traces correspondant à l'expert.
-	  * \param os le flux de sortie utilisé pour l'affichage.
 	  */
-	void displayAlignment(const std::vector<Trace::sp_trace>& l, const std::vector<Trace::sp_trace>& e, std::ostream &os = std::cout) const;
-	
+	void displayAlignment(const std::vector<Trace::sp_trace>& l, const std::vector<Trace::sp_trace>& e) const;
+
 	/**
 	  * \brief Détermination de l'ensemble des feedbacks d'alignement.
 	  *
@@ -646,21 +630,21 @@ private:
 	  * \param e le vecteur de traces correspondant à l'expert.
 	  */
 	void listAlignmentFeedbacks(const std::vector<Trace::sp_trace>& l, const std::vector<Trace::sp_trace>& e);
-	
+
 	/**
 	  * \brief Détermination de l'ensemble des feedbacks globaux.
 	  *
 	  * Les seuls feedbacks globaux ajoutés actuellement sont les feedbacks de type FeedbackType::USEFUL_CALL et FeedbackType::USELESS_CALL.
 	  */
 	void listGlobalFeedbacks();
-	
+
 	/**
 	  * \brief Association des feedbacks trouvés (ceux contenus dans \p feedbacks) avec les feedbacks de référence (ceux contenus dans \p ref_feedbacks).
 	  *
 	  * Cette fonction sert à donner une valeur aux champs Feedback::priority, Feedback::info et Feedback::defined des objets contenus dans \p feedbacks.
 	  */
 	void bindFeedbacks();
-	
+
 	/**
 	  * \brief Test de correspondance entre deux séquences.
 	  *
@@ -671,7 +655,7 @@ private:
       * \param ref_sps la deuxième séquence du test de correspondance.
 	  */
 	bool feedbackSequencesMatch(const Sequence::sp_sequence& sps, const Sequence::sp_sequence& ref_sps) const;
-	
+
 	/**
 	  * \brief Calcul d'un score de similarité entre les patterns d'un feedback listé et d'un feedback de référence.
 	  *
@@ -683,16 +667,14 @@ private:
 	  * \return le score calculé.
 	  */
 	double getFeedbackScore(const Feedback& f, int j);
-	
+
 	/**
 	  * \brief Filtrage des feedbacks listés
 	  *
 	  * Cette fonction contient plusieurs filtres permettant d'éliminer les feedbacks redondants ou non pertinents pour le retour qui sera donné au joueur.
-	  *
-	  * \param os le flux de sortie utilisé pour l'affichage.
 	  */
-	void filterFeedbacks(std::ostream &os = std::cout);
-	
+	void filterFeedbacks();
+
 	/**
 	  * \brief Construction de la chaîne de caractères qui servira pour le retour sur la solution.
 	  *
@@ -702,13 +684,13 @@ private:
 	  * \param ref_f le feedback de référence
 	  */
 	void setFeedbackInfo(Feedback &f, Feedback &ref_f) const;
-	
+
 	/**
 	  * \brief Construction d'un vecteur permettant de faciliter le parcours de l'alignement courant entre deux vecteurs de traces.
 	  *
 	  * Cette fonction se base sur l'alignement effectué entre \p l et \e pour construire un vecteur de couples d'indices reflétant cet alignement. On donne un exemple ci-dessous :
 	  *
-	  * Prenons les deux vecteurs de traces suivants : 
+	  * Prenons les deux vecteurs de traces suivants :
 	  *
 	  *		root					root
 	  *			Sequence				C
@@ -732,7 +714,7 @@ private:
 	  * Remarque : Ce qui est appelé "chemin" ici n'est pas de la même nature que le "chemin" utilisé par la fonction TracesAnalyser::findBestAlignment pour trouver le meilleur alignement possible entre deux vecteurs de traces.
 	  */
 	path constructAlignmentPath(const std::vector<Trace::sp_trace>& l, const std::vector<Trace::sp_trace>& e) const;
-	
+
 	/**
 	  * \brief Récupération de l'indice d'un feedback listé à partir d'une trace et d'un type de feedback.
 	  *
@@ -742,7 +724,7 @@ private:
 	  * \return l'indice du feedback trouvé dans le vecteur TracesAnalyser::feedbacks, ou -1 si aucun feedback n'est trouvé.
 	  */
 	int getFeedbackIndex(const Trace::sp_trace& t, FeedbackType type = NONE) const;
-	
+
 };
 
 #endif

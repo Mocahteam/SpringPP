@@ -112,7 +112,7 @@ bool Sequence::hasNumberIterationFixed() const {
 
 void Sequence::addOne() {
 	updateNumMap(num,-1);
-	updateNumMap(++num);	
+	updateNumMap(++num);
 }
 
 unsigned int Sequence::size() const {
@@ -269,7 +269,7 @@ double Sequence::getNumMapMeanDistance(const Sequence::sp_sequence& sps) const {
 
 /**
  * \brief Extraction de l'ensemble des sequences contenus dans le vecteur de traces de la séquence. La séquence appelante est inclus dans le résultat.
- * 
+ *
  * \return un vecteur de sequences
  */
 Sequence::sequence_vector Sequence::getSequences() {
@@ -301,7 +301,7 @@ Sequence::sequence_vector Sequence::getSequences() {
 
 /**
  * \brief Extraction de l'ensemble des calls contenus dans le vecteur de traces de la séquence
- * 
+ *
  * \param setMod : un booléen qui est à faux si on autorise les doublons, et à vrai sinon
  *
  * \return un vecteur de calls
@@ -334,7 +334,7 @@ Call::call_vector Sequence::getCalls(bool setMod) {
 					else {
 						bool found = false;
 						for (unsigned int j = 0; !found && j < v.size(); j++) {
-							if (v.at(j)->getLabel().compare(spc->getLabel()) == 0)
+							if (v.at(j)->getKey().compare(spc->getKey()) == 0)
 								found = true;
 						}
 						if (!found)

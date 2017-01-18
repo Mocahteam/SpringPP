@@ -72,7 +72,7 @@ CProgAndPlay* pp;
 
 CProgAndPlay::CProgAndPlay() : loaded(false), updated(false), missionEnded(false), tracePlayer(false), archiveLoaded(false), tp(true), ta() {
 	log("ProgAndPLay constructor begin");
-		
+
 	// initialisation of Prog&Play
 	if (PP_Init() == -1) {
 		std::string tmp(PP_GetError());
@@ -82,7 +82,7 @@ CProgAndPlay::CProgAndPlay() : loaded(false), updated(false), missionEnded(false
 		log("Prog&Play initialized");
 		loaded = true;
 	}
-	
+
 	// delete mission_ended.conf file if it exists => this file could be created
 	// by mods if lua mission is ended.
 	//CFileHandler * tmpFile = new CFileHandler("mission_ended.conf");
@@ -91,11 +91,11 @@ CProgAndPlay::CProgAndPlay() : loaded(false), updated(false), missionEnded(false
 	//delete tmpFile;
 	//if (del)
 	//	FileSystemHandler::DeleteFile(filesystem.LocateFile("mission_ended.conf"));
-	
+
 	archivePath = "mods\\" + archiveScanner->ArchiveFromName(gameSetup->modName);
-		
+
 	openTracesFile();
-	
+
 	log("ProgAndPLay constructor end");
 }
 
@@ -110,28 +110,28 @@ CProgAndPlay::~CProgAndPlay() {
 		log("Prog&Play shut down and cleaned up");
   }
   if (ppTraces.is_open()) {
-	if (!missionEnded) {
-		tp.setEnd();
-		tracesThread.join();
-	}
-	ppTraces.close();
+		if (!missionEnded) {
+			tp.setEnd();
+			tracesThread.join();
+		}
+		ppTraces.close();
   }
   logFile.close();
   log("ProgAndPLay destructor end");
 }
 
 void CProgAndPlay::Update(void) {
-	log("ProgAndPLay::Update begin");
-	
+	//log("ProgAndPLay::Update begin");
+
 	// std::stringstream ss;
-	
+
 	bool unitsIdled = allUnitsIdled();
 	logMessages(unitsIdled); // check if mission is ended, clean messages in shared memory and store log messages
-	
+
 	// ss << "units idled : " << unitsIdled << std::endl;
 	// log(ss.str());
 	// ss.str("");
-	
+
 	if (tracePlayer && !tp.getEnd()) {
 		if (!unitsIdled) {
 			if (endless_loop_frame_counter != 0)
@@ -143,13 +143,13 @@ void CProgAndPlay::Update(void) {
 		}
 		else if (units_idled_frame_counter > -1)
 			units_idled_frame_counter++;
-		
+
 		bool endlessLoop = endless_loop_frame_counter > UPDATE_RATE_MULTIPLIER * UNIT_SLOWUPDATE_RATE;
 		unitsIdled = units_idled_frame_counter > UPDATE_RATE_MULTIPLIER * UNIT_SLOWUPDATE_RATE;
-		
+
 		if (!tp.getProceed() && (unitsIdled || allUnitsDead()))
 			tp.setProceed(true);
-		
+
 		// ss << "endless loop : " << endlessLoop << std::endl;
 		// log(ss.str());
 		// ss.str("");
@@ -177,22 +177,22 @@ void CProgAndPlay::Update(void) {
 			tp.setProceed(false);
 			endless_loop_frame_counter = -1;
 			units_idled_frame_counter = -1;
-			
+
 			if (missionEnded) {
 				tp.setEnd();
 				tracesThread.join();
 				ppTraces.close();
 			}
-			
-			// ss << "feedbacksWidgetEnabled : " << configHandler->GetString("Feedbacks Widget", "disabled") << std::endl;
+
+			// ss << "feedbacksWidgetEnabled : " << configHandler->GetString("Feedbacks Widget", "disabled", true) << std::endl;
 			// log(ss.str());
 			// ss.str("");
 
 			const std::map<std::string,std::string>& modOpts = gameSetup->modOptions;
-			if ((modOpts.find("testmap") == modOpts.end() || modOpts.at("testmap").compare("0") == 0) && configHandler->GetString("Feedbacks Widget", "disabled").compare("enabled") == 0) {
-				// The feedback widget is enabled : launch analysis of player's traces
+			if ((modOpts.find("testmap") == modOpts.end() || modOpts.at("testmap").compare("0") == 0) && configHandler->GetString("Feedbacks Widget", "disabled", true).compare("enabled") == 0) {
+				log("feedback widget is enabled : launch analysis of player's traces");
 				ta.setEndlessLoop(endlessLoop);
-				
+
 				const std::string learner_xml = loadFile(springTracesPath + missionName + "_compressed.xml");
 				std::vector<std::string> experts_xml;
 				if (archiveLoaded) {
@@ -202,10 +202,10 @@ void CProgAndPlay::Update(void) {
 							experts_xml.push_back(loadFileFromArchive(archiveExpertPath + missionName + "\\" + files.at(i)));
 					}
 				}
-				
+
 				if (!experts_xml.empty()) {
-					std::string feedback = ta.constructFeedback(learner_xml, experts_xml, -1, -1, logFile);
-					
+					std::string feedback = ta.constructFeedback(learner_xml, experts_xml, -1, -1);
+
 					log("feedback determined");
 					// Write into file
 					std::ofstream jsonFile;
@@ -214,17 +214,20 @@ void CProgAndPlay::Update(void) {
 						jsonFile << feedback;
 						jsonFile.close();
 					}
-					
+
 					// Add prefix to json string
 					feedback.insert(0,"Feedback_");
 					// Send feedback to Lua (SendLuaRulesMsg function in LuaUnsyncedCtrl)
 					std::vector<boost::uint8_t> data(feedback.size());
 					std::copy(feedback.begin(), feedback.end(), data.begin());
-					net->Send(CBaseNetProtocol::Get().SendLuaMsg(gu->myPlayerNum, LUA_HANDLE_ORDER_RULES, 0, data));
+					net->Send(CBaseNetProtocol::Get().SendLuaMsg(gu->myPlayerNum, LUA_HANDLE_ORDER_RULES, 0, data)); // processed by mission_runner.lua
 				}
-			}
-			
-			
+				else
+					log("no expert compressed traces found: analysis aborted");
+			} else
+				log("testmap or feedback widget disabled: analysis aborted");
+
+
 			if (missionEnded && modOpts.find("testmap") != modOpts.end() && modOpts.at("testmap").compare("1") == 0) {
 				// TEST MOD : generating an expert solution for a mission
 				// move traces and compressed traces files to directory 'traces\data\expert\missionName'
@@ -251,14 +254,14 @@ void CProgAndPlay::Update(void) {
 							}
 						}
 						closedir(pdir);
-												
+
 						std::string oldName = springTracesPath + missionName + ".log";
 						std::string newName = path + "\\" + boost::lexical_cast<std::string>(num) + ".log";
 						if (rename(oldName.c_str(), newName.c_str()) == 0)
 							log("brute traces successfully renamed");
 						else
 							log("brute traces rename operation failed");
-						
+
 						oldName = springTracesPath + missionName + "_compressed.xml";
 						newName = path + "\\" + boost::lexical_cast<std::string>(num) + ".xml";
 						if (rename(oldName.c_str(), newName.c_str()) == 0)
@@ -270,13 +273,13 @@ void CProgAndPlay::Update(void) {
 			}
 		}
 	}
-	
+
 	// check if the player has click on the publish tab. It can happen only if the mission is ended.
-	if (configHandler->GetString("publish", "false").compare("true") == 0) {
+	if (configHandler->GetString("publish", "false", true).compare("true") == 0) {
 		configHandler->SetString("publish", "false", true);
 		publishOnFacebook();
 	}
-		
+
 	// Execute pending commands
 	int nbCmd = execPendingCommands();
 	if (nbCmd == -1){
@@ -288,8 +291,8 @@ void CProgAndPlay::Update(void) {
 		std::string tmp(PP_GetError());
 		log(tmp.c_str());
 	}
-		
-	log("ProgAndPLay::Update end");
+
+	//log("ProgAndPLay::Update end");
 }
 
 /*
@@ -342,7 +345,7 @@ void CProgAndPlay::UpdateTimestamp() {
 }
 
 PP_ShortUnit buildShortUnit(CUnit *unit, PP_Coalition c){
-log("ProgAndPLay::buildShortUnit begin");
+	//log("ProgAndPLay::buildShortUnit begin");
 	PP_ShortUnit tmpUnit;
 	tmpUnit.id = unit->id;
 	tmpUnit.coalition = c;
@@ -398,13 +401,13 @@ log("ProgAndPLay::buildShortUnit begin");
 		tmpUnit.commandQueue = NULL;
 		tmpUnit.nbCommandQueue = 0;
 	}
-	
-log("ProgAndPLay::buildShortUnit end");
+
+	//log("ProgAndPLay::buildShortUnit end");
 	return tmpUnit;
 }
 
 void freeShortUnit (PP_ShortUnit unit){
-log("ProgAndPLay::freeShortUnit begin");
+	//log("ProgAndPLay::freeShortUnit begin");
 	if (unit.commandQueue != NULL){
 		for (int i = 0 ; i < unit.nbCommandQueue ; i++){
 			if (unit.commandQueue[i].param != NULL)
@@ -414,69 +417,69 @@ log("ProgAndPLay::freeShortUnit begin");
 		unit.commandQueue = NULL;
 		unit.nbCommandQueue = 0;
 	}
-log("ProgAndPLay::freeShortUnit end");
+	//log("ProgAndPLay::freeShortUnit end");
 }
 
 void doUpdate(CUnit* unit, PP_Coalition c){
-std::stringstream str;
-str << "ProgAndPLay::doUpdate begin : " << unit->id;
-log(str.str());
+	//std::stringstream str;
+	//str << "ProgAndPLay::doUpdate begin : " << unit->id;
+	//log(str.str());
 	PP_ShortUnit shortUnit = buildShortUnit(unit, c);
 	if (PP_UpdateUnit(shortUnit) == -1){
 		std::string tmp(PP_GetError());
 		log(tmp.c_str());
 	}
 	freeShortUnit(shortUnit);
-log("ProgAndPLay::doUpdate end");
+	//log("ProgAndPLay::doUpdate end");
 }
 
 void doAdding(CUnit* unit, PP_Coalition c){
-std::stringstream str;
-str << "ProgAndPLay::doAdding begin : " << unit->id;
-log(str.str());
+	//std::stringstream str;
+	//str << "ProgAndPLay::doAdding begin : " << unit->id;
+	//log(str.str());
 	PP_ShortUnit shortUnit = buildShortUnit(unit, c);
 	if (PP_AddUnit(shortUnit) == -1){
 		std::string tmp(PP_GetError());
 		log(tmp.c_str());
 	}
 	freeShortUnit(shortUnit);
-log("ProgAndPLay::doAdding end");
+	//log("ProgAndPLay::doAdding end");
 }
 
 void doRemoving (int unitId){
-std::stringstream ss;
-ss << "ProgAndPLay::doRemoving begin : " << unitId;
-log(ss.str());
+	//std::stringstream ss;
+	//ss << "ProgAndPLay::doRemoving begin : " << unitId;
+	//log(ss.str());
 	if (PP_RemoveUnit(unitId) == -1){
 		std::string tmp(PP_GetError());
 		log(tmp.c_str());
 	}
-log("ProgAndPLay::doRemoving end");
+	//log("ProgAndPLay::doRemoving end");
 }
 
 void CProgAndPlay::AddUnit(CUnit* unit){
-	log("ProgAndPLay::AddUnit begin");
+	//log("ProgAndPLay::AddUnit begin");
 	PP_Coalition c;
 	if (unit->team == gu->myTeam)
 		c = MY_COALITION;
 	else if (teamHandler->AlliedTeams(unit->team, gu->myTeam))
 		c = ALLY_COALITION;
-	else 
+	else
 		c = ENEMY_COALITION;
 	if (c != ENEMY_COALITION || loshandler->InLos(unit, gu->myAllyTeam)){
 		doAdding(unit, c);
 	}
-	log("ProgAndPLay::AddUnit end");
+	//log("ProgAndPLay::AddUnit end");
 }
 
 void CProgAndPlay::UpdateUnit(CUnit* unit){
-log("ProgAndPLay::UpdateUnit begin");
+	//log("ProgAndPLay::UpdateUnit begin");
 	PP_Coalition c;
 	if (unit->team == gu->myTeam)
 		c = MY_COALITION;
 	else if (teamHandler->AlliedTeams(unit->team, gu->myTeam))
 		c = ALLY_COALITION;
-	else 
+	else
 		c = ENEMY_COALITION;
 	if (c != ENEMY_COALITION){
 		doUpdate(unit, c);
@@ -503,17 +506,17 @@ log("ProgAndPLay::UpdateUnit begin");
 			}
 		}
 	}
-log("ProgAndPLay::UpdateUnit end");
+	//log("ProgAndPLay::UpdateUnit end");
 }
 
 void CProgAndPlay::RemoveUnit(CUnit* unit){
-log("ProgAndPLay::RemoveUnit begin");
+	//log("ProgAndPLay::RemoveUnit begin");
 	doRemoving(unit->id);
-log("ProgAndPLay::RemoveUnit end");
+	//log("ProgAndPLay::RemoveUnit end");
 }
 
 int CProgAndPlay::updatePP(void){
-log("ProgAndPLay::updatePP begin");
+	//log("ProgAndPLay::updatePP begin");
 	if (!updated) {
 		updated = true;
 		// store map size
@@ -563,7 +566,7 @@ log("ProgAndPLay::updatePP begin");
 		if (ret == -1)
 			return -1;
 	}
-	
+
 	// store resources
 	PP_Resources resources;
 	resources.size = 2;
@@ -578,9 +581,9 @@ log("ProgAndPLay::updatePP begin");
 	free(resources.resource);
 	if (ret == -1)
 		return -1;
-	
+
 	// set game over. This depends on engine state (game->gameOver) and/or
-	// missions state (tmpFile->FileExists() => this file is created by mod if 
+	// missions state (tmpFile->FileExists() => this file is created by mod if
 	// lua mission is ended)
 	//CFileHandler * tmpFile = new CFileHandler("mission_ended.conf");
 	ret = PP_SetGameOver(game->gameOver || missionEnded);
@@ -588,19 +591,19 @@ log("ProgAndPLay::updatePP begin");
 	if (ret == -1)
 		return -1;
 
-log("ProgAndPLay::updatePP end");
+	//log("ProgAndPLay::updatePP end");
 	return 0;
 }
 
 int CProgAndPlay::execPendingCommands(){
-log("ProgAndPLay::execPendingCommands begin");
+	//log("ProgAndPLay::execPendingCommands begin");
 	int nbCmd = 0;
-	PP_PendingCommands* pendingCommands = PP_GetPendingCommands();
+	PP_PendingCmds* pendingCommands = PP_GetPendingCommands();
 	if (pendingCommands == NULL) return -1;
 	else{
 		nbCmd = pendingCommands->size;
 		for (int i = 0 ; i < pendingCommands->size ; i++){
-			PP_PendingCommand pc = pendingCommands->pendingCommand[i];
+			PP_PendingCmd pc = pendingCommands->pendingCommand[i];
 			// Check for affecting group
 			if (pc.group != -2){
 				// Check if unit exists
@@ -647,7 +650,7 @@ log("ProgAndPLay::execPendingCommands begin");
 					break;
 				case 0 : // the command target a position
 					// indicates the y value
-					pc.command.param[1] = 
+					pc.command.param[1] =
 						ground->GetHeight(pc.command.param[0], pc.command.param[2]);
 					break;
 				case 1 : // the command targets a unit
@@ -717,7 +720,7 @@ log("ProgAndPLay::execPendingCommands begin");
 		}
 	}
 	PP_FreePendingCommands(pendingCommands);
-log("ProgAndPLay::execPendingCommands end");
+	//log("ProgAndPLay::execPendingCommands end");
 	return nbCmd;
 }
 
@@ -744,13 +747,13 @@ bool CProgAndPlay::allUnitsDead() {
 }
 
 void CProgAndPlay::logMessages(bool unitsIdled) {
-	log("ProgAndPLay::logMessages begin");
+	//log("ProgAndPLay::logMessages begin");
 	int i = 0;
 	if (!missionEnded) {
 		//CFileHandler *tmpFile = new CFileHandler("mission_ended.conf");
 		//bool res = tmpFile->FileExists();
 		//delete tmpFile;
-		std::string victoryState = configHandler->GetString("victoryState", "");
+		std::string victoryState = configHandler->GetString("victoryState", "", true);
 		if (victoryState.compare("") != 0) {
 			//mission ended
 			//std::ifstream ifs("mission_ended.conf");
@@ -783,43 +786,43 @@ void CProgAndPlay::logMessages(bool unitsIdled) {
 		// Get next message
 		msg = PP_PopMessage();
 	}
-	if (i > 0) {
+	/*if (i > 0) {
 		std::stringstream ss;
 		ss << "ProgAndPLay::logMessages end ("  << i << " messages logged)";
 		log(ss.str());
 	}
 	else
-		log("ProgAndPLay::logMessages end");
+		log("ProgAndPLay::logMessages end");*/
 }
 
 void CProgAndPlay::openTracesFile() {
 	log("ProgAndPLay::openTracesFile begin");
 	const std::map<std::string,std::string>& modOpts = gameSetup->modOptions;
 	if (modOpts.find("activetraces") != modOpts.end() && modOpts.at("activetraces").compare("1") == 0 && modOpts.find("missionname") != modOpts.end()) {
+		log("ProgAndPLay::traces analysis activated");
 		bool dirExists = FileSystemHandler::mkdir(springTracesPath);
 		if (dirExists) {
 			missionName = modOpts.at("missionname");
-			
+
 			if (vfsHandler->AddArchive(archivePath, false)) {
 				log("mod archive successfully loaded");
 				archiveLoaded = true;
-				
+
 				// compression parameters loading from JSON for TracesParser
 				// first check is in the archive. second check is in Spring directory.
-				std::string params_json = loadFileFromArchive(archiveParamsPath);
-				if (params_json.compare("") != 0)
+				TracesParser::params_json = loadFileFromArchive(archiveParamsPath);
+				if (TracesParser::params_json.compare("") != 0)
 					log("compression params loaded from mod archive");
 				else {
-					params_json = loadFile(springParamsPath);
-					if (params_json.compare("") != 0)
+					TracesParser::params_json = loadFile(springParamsPath);
+					if (TracesParser::params_json.compare("") != 0)
 						log("compression params loaded from spring directory");
+					else
+						log("default compression params will be used");
 				}
-				if (params_json.compare("") != 0)
-					tp.initParamsMap(params_json);
-				else
-					log("default compression params will be used");
-					
-				if (modOpts.find("testmap") != modOpts.end() && modOpts.at("testmap").compare("0") == 0) {
+
+				// If testmap is not defined or is set to false (0)
+				if (modOpts.find("testmap") == modOpts.end() || modOpts.at("testmap").compare("0") == 0) {
 					log("start feedbacks loading");
 					// feedbacks loading from XML for TracesAnalyser
 					const std::string feedbacks_xml = loadFile(springFeedbacksPath);
@@ -834,11 +837,12 @@ void CProgAndPlay::openTracesFile() {
 					if (feedbacks_xml.compare("") != 0)
 						ta.loadXmlInfos(feedbacks_xml,mission_feedbacks_xml);
 					log("end feedbacks loading");
-				}
+				} else
+					log("test mission in editor mode => no traces analysis");
 			}
 			else
 				log("mod archive loading has failed");
-			
+
 			ta.setLang((modOpts.find("language") != modOpts.end()) ? modOpts.at("language") : "en");
 			std::stringstream ss;
 			ss << springTracesPath << missionName << ".log";
@@ -851,7 +855,6 @@ void CProgAndPlay::openTracesFile() {
 				// thread creation
 				std::string dirName = springTracesPath;
 				dirName.erase(dirName.end()-1);
-				std::cout << "dirName : " << dirName << std::endl;
 				tracesThread = boost::thread(&TracesParser::parseTraceFileOffline, &tp, dirName, missionName+".log");
 			}
 		}
@@ -859,7 +862,8 @@ void CProgAndPlay::openTracesFile() {
 			PP_SetError("ProgAndPlay::cannot create traces directory");
 			log(PP_GetError());
 		}
-	}
+	} else
+		log("ProgAndPLay::traces analysis not activated");
 	log("ProgAndPLay::openTracesFile end");
 }
 
@@ -868,7 +872,7 @@ void CProgAndPlay::openTracesFile() {
 void CProgAndPlay::openFacebookUrl() {
 	std::string url = facebookUrl+"?app_id="+appId+"&display=page&caption="+caption+"&description="+description+"&link="+link+"&href="+link+"&redirect_uri="+redirect_uri+"&picture="+server_name+server_images_path+photoFilename;
 	#ifdef __linux__
-		std::string cmd = "x-www-browser " + url; 
+		std::string cmd = "x-www-browser " + url;
 		system(cmd.c_str());
 	#elif _WIN32
 		ShellExecuteA(NULL, "open", url.c_str(), NULL, NULL, SW_SHOWNORMAL);
@@ -898,11 +902,11 @@ void CProgAndPlay::sendRequestToServer() {
 
 		boost::asio::streambuf request;
 		std::ostream request_stream(&request);
-		request_stream << "GET " << server_path << "?score=" << configHandler->GetString("score","") << "&mission_name=" << missionName << " HTTP/1.0\r\n";
+		request_stream << "GET " << server_path << "?score=" << configHandler->GetString("score","", true) << "&mission_name=" << missionName << " HTTP/1.0\r\n";
 		request_stream << "Host: " << server_name << "\r\n";
 		request_stream << "Accept: */*\r\n";
 		request_stream << "Connection: close\r\n\r\n";
-		
+
 		boost::asio::write(socket, request);
 
 		// Read the response status line. The response streambuf will automatically
@@ -920,11 +924,13 @@ void CProgAndPlay::sendRequestToServer() {
 		std::string status_message;
 		std::getline(response_stream, status_message);
 		if (!response_stream || http_version.substr(0, 5) != "HTTP/") {
-			std::cout << "Invalid response\n";
+			log("Invalid response\n");
 			return;
 		}
 		if (status_code != 200) {
-			std::cout << "Response returned with status code " << status_code << "\n";
+			std::ostringstream oss;
+			oss << "Response returned with status code " << status_code << "\n";
+			log(oss.str());
 			return;
 		}
 		// Read the response headers, which are terminated by a blank line.
@@ -945,13 +951,15 @@ void CProgAndPlay::sendRequestToServer() {
 			throw boost::system::system_error(error);
 	}
 	catch (std::exception& e) {
-		std::cout << "Exception: " << e.what() << "\n";
+		std::ostringstream oss;
+		oss << "Exception: " << e.what() << "\n";
+		log(oss.str());
 	}
 }
 
 void CProgAndPlay::publishOnFacebook() {
 	log("publish");
-	if (photoFilename.empty() && !configHandler->GetString("score", "").empty()) {
+	if (photoFilename.empty() && !configHandler->GetString("score", "", true).empty()) {
 		log("sending request to the server");
 		sendRequestToServer();
 	}
