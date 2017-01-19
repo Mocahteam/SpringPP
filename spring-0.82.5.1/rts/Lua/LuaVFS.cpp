@@ -585,9 +585,10 @@ int LuaVFS::BuildPPGame(lua_State* L) {
 	for (lua_pushnil(L) ; lua_next(L, 8) != 0 ; lua_pop(L, 1)) {
 		tracesList.push_back(luaL_checkstring(L, -1));
 	}
+	const string modtype = luaL_checkstring(L, 9);
 
 	// Prepare file
-	const string modinfo = "return { game='" + name + "', shortGame='" + name + "', name='" + name + "', shortName='" + name + "', mutator='official', version='1.0', description='SPRED module. " + desc + "', url='http://www.irit.fr/ProgAndPlay/index_en.php', modtype=1, depend= { \"" + game + "\" },}";
+	const string modinfo = "return { game='" + name + "', shortGame='" + name + "', name='" + name + "', shortName='" + name + "', mutator='official', version='1.0', description='SPRED module. " + desc + "', url='http://www.irit.fr/ProgAndPlay/index_en.php', modtype=" + modtype + ", depend= { \"" + game + "\" },}";
 	const string gameFileName = "mods/" + gameName + ".sdz";
 
 	// Locate editor zip
@@ -647,12 +648,14 @@ int LuaVFS::BuildPPGame(lua_State* L) {
 	zipWriteInFileInZip(gameZip, modinfo.c_str(), modinfo.length());
 	zipCloseFileInZip(gameZip);
 	// Scenario
-	const string scenarioPath = "SPRED/scenarios/" + scenarioFileName + ".xml";
-	ifstream scenarioFile(scenarioPath.c_str());
-	string scenarioString((istreambuf_iterator<char>(scenarioFile)), istreambuf_iterator<char>());
-	zipOpenNewFileInZip(gameZip, "scenario/scenario.xml", zipfi, NULL, 0, NULL, 0, NULL, Z_DEFLATED, Z_BEST_COMPRESSION);
-	zipWriteInFileInZip(gameZip, scenarioString.c_str(), scenarioString.length());
-	zipCloseFileInZip(gameZip);
+	if (scenarioFileName != ""){
+		const string scenarioPath = "SPRED/scenarios/" + scenarioFileName + ".xml";
+		ifstream scenarioFile(scenarioPath.c_str());
+		string scenarioString((istreambuf_iterator<char>(scenarioFile)), istreambuf_iterator<char>());
+		zipOpenNewFileInZip(gameZip, "scenario/scenario.xml", zipfi, NULL, 0, NULL, 0, NULL, Z_DEFLATED, Z_BEST_COMPRESSION);
+		zipWriteInFileInZip(gameZip, scenarioString.c_str(), scenarioString.length());
+		zipCloseFileInZip(gameZip);
+	}
 	// Missions
 	for (int i = 0 ; i < levelList.size() ; i++) {
 		const string levelPath = "SPRED/missions/" + levelList[i] + ".editor";
