@@ -640,7 +640,11 @@ int LuaVFS::BuildPPGame(lua_State* L) {
 
 	// Open game zip
 	zipFile gameZip = zipOpen(gamePath.c_str(), APPEND_STATUS_ADDINZIP);
-	if (gameZip == NULL) { luaL_error(L, "Couldn't load extracted archive"); return 0; }
+	if (gameZip == NULL) {
+		std::string msg = "Couldn't load archive \"" + gamePath + "\"";
+		luaL_error(L, msg.c_str());
+		return 0;
+	}
 
 	// Write files
 	// ModInfo
