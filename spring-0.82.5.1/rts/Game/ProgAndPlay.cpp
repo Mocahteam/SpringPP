@@ -71,7 +71,7 @@ void log(std::string msg) {
 
 CProgAndPlay* pp;
 
-CProgAndPlay::CProgAndPlay() : loaded(false), updated(false), missionEnded(false), tracePlayer(false), archiveLoaded(false), tp(true), ta() {
+CProgAndPlay::CProgAndPlay() : loaded(false), updated(false), missionEnded(false), traceModuleCorrectlyInitialized(false), archiveLoaded(false), tp(true), ta(), tracesComing(false), newExecutionDetected(false) {
 	log("ProgAndPLay constructor begin");
 
 	// initialisation of Prog&Play
@@ -87,8 +87,30 @@ CProgAndPlay::CProgAndPlay() : loaded(false), updated(false), missionEnded(false
 	// The path where the .sdz are located
 	archivePath = "mods\\" + archiveScanner->ArchiveFromName(gameSetup->modName);
 
-	// open the appropriate traces file based on the current mission and launch the thread to perform traces
-	openTracesFile();
+  const std::map<std::string,std::string>& modOpts = gameSetup->modOptions;
+
+	// init tracesOn depending on activetraces field in mod options
+	bool tracesOn = modOpts.find("activetraces") != modOpts.end() && modOpts.at("activetraces").compare("1") == 0;
+
+	// Check if we are in testing mode
+	testMapMode = modOpts.find("testmap") != modOpts.end();
+
+	if (modOpts.find("missionname") != modOpts.end())
+		missionName = modOpts.at("missionname");
+	else
+		missionName = "";
+
+	// init and open the appropriate traces file based on the current mission and launch the thread to perform traces
+	if (tracesOn && missionName != ""){
+		initTracesFile();
+		if (traceModuleCorrectlyInitialized){
+			log("launch thread to parse and compress traces");
+			// thread creation
+			std::string dirName = springTracesPath;
+			dirName.erase(dirName.end()-1);
+			tracesThread = boost::thread(&TracesParser::parseTraceFileOffline, &tp, dirName, missionName+".log");
+		}
+	}
 
 	log("ProgAndPLay constructor end");
 }
@@ -108,6 +130,8 @@ CProgAndPlay::~CProgAndPlay() {
 			// Stop thread
 			tp.setEnd();
 			tracesThread.join();
+			// then the trace module is no longer initialized
+			traceModuleCorrectlyInitialized = false;
 		}
 		// Close traces file
 		ppTraces.close();
@@ -121,43 +145,24 @@ void CProgAndPlay::Update(void) {
 
 	// std::stringstream ss;
 
-	// Check if mission is ended. This depends on engine state (game->gameOver) and/or
-	// missions state (victoryState)
-	if (!missionEnded) {
-		std::string victoryState = configHandler->GetString("victoryState", "", true);
-		if (victoryState.compare("") != 0 || game->gameOver) {
-			// Log end messages
-			if (ppTraces.good()) {
-				ppTraces << MISSION_END_TIME << " " << startTime + (int)std::floor(gu->PP_modGameTime) << std::endl;
-				ppTraces << GAME_END << " " << victoryState << " " << missionName << std::endl;
-			}
-			missionEnded = true;
-		}
-	}
-
-	// check if all units are idled
-	bool unitsIdled = allUnitsIdled();
-
-	// check if we detect activity in logs
+	// try to identify new pull of traces
 	char * msg = PP_PopMessage();
-	if (msg != NULL && unitsIdled && endless_loop_frame_counter > -1)
-		endless_loop_frame_counter++; // logs comming, all units are idled => probably an endless loop
-	if (msg != NULL && unitsIdled && units_idled_frame_counter > -1)
-		units_idled_frame_counter++; // increase counter to know how much time all units are idled
-
-	if (!unitsIdled) {
-		// if at least one unit doing something, we reset counter to detect idle units and endless loop
-		endless_loop_frame_counter = 0;
-		units_idled_frame_counter = 0;
-	}
-
-	// compute if we reach limit to detect an endless loop and idle units
-	bool endlessLoopReach = endless_loop_frame_counter > UPDATE_RATE_MULTIPLIER * UNIT_SLOWUPDATE_RATE;
-	bool unitsIdledReach = units_idled_frame_counter > UPDATE_RATE_MULTIPLIER * UNIT_SLOWUPDATE_RATE;
-
-	// Log pending messages
+	bool tracesComing = msg != NULL;
+	// even if trace module is not artivated, we pop messages by security in order to
+	// avoid to fill shared memory in case of P&P client push traces whereas trace
+	// module is not activated.
 	while (msg != NULL) {
-		if (ppTraces.good() && !endlessLoopReach) {
+		std::string line (msg);
+		if (line.find(EXECUTION_START_TIME) != std::string::npos){
+			log("CProgAndPlay : new execution detected");
+			needFeedback();
+			newExecutionDetected = true;
+		}
+		// we send traces to the parser only if feedbacks are allowed
+		if (ppTraces.good() && (allowFeedback ||
+			 	line.find(GAME_START) != std::string::npos ||
+				line.find(MISSION_START_TIME) != std::string::npos)) {
+			// we send this log to the parser
 			if (missionEnded)
 				ppTraces << DELAYED << " ";
 			// Write this message on traces file
@@ -169,46 +174,50 @@ void CProgAndPlay::Update(void) {
 		msg = PP_PopMessage();
 	}
 
-	// check if we have to continue to parse traces
-	if (tracePlayer && !tp.getEnd()) {
+	// Check if mission is ended. This depends on engine state (game->gameOver) and/or
+	// missions state (victoryState)
+	if (!missionEnded) {
+		std::string victoryState = configHandler->GetString("victoryState", "", true);
+		if (victoryState.compare("") != 0 || game->gameOver) {
+			// Log end messages
+			if (ppTraces.good()) {
+				ppTraces << MISSION_END_TIME << " " << startTime + (int)std::floor(gu->PP_modGameTime) << std::endl;
+				ppTraces << GAME_END << " " << victoryState << " " << missionName << std::endl;
+			}
+			log ("CProgAndPlay : missionEnded set to true");
+			missionEnded = true;
+			needFeedback();
+		}
+	} else
+		mission_ended_frame_counter++;
+	// compute if we reach limits to accept end mission (usefull to take in account endless loop)
+	if (mission_ended_frame_counter-1 <= MISSION_ENDED_MULTIPLIER * UNIT_SLOWUPDATE_RATE && mission_ended_frame_counter > MISSION_ENDED_MULTIPLIER * UNIT_SLOWUPDATE_RATE)
+		log("CProgAndPlay : mission ended limit time exceed");
+	bool missionEndedReach = mission_ended_frame_counter > MISSION_ENDED_MULTIPLIER * UNIT_SLOWUPDATE_RATE;
 
-		// if missionEnded or all units are idled or dead, then we ask trace parser to proceed
-		// all traces agregated from the last execution
-		tp.setProceed(missionEnded || unitsIdledReach || allUnitsDead());
+	if (traceModuleCorrectlyInitialized && allowFeedback){
+		// check if all units are idled
+		bool unitsIdled = allUnitsIdled();
+		if (unitsIdled && units_idled_frame_counter > -1)
+			units_idled_frame_counter++; // increase counter to know how much time all units are idled
+		// compute if we reach limits to accept idle units
+		if (units_idled_frame_counter-1 <= UNITS_IDLED_MULTIPLIER * UNIT_SLOWUPDATE_RATE && units_idled_frame_counter > UNITS_IDLED_MULTIPLIER * UNIT_SLOWUPDATE_RATE)
+			log("CProgAndPlay : units idle limit time exceed");
+		bool unitsIdledReach = units_idled_frame_counter > UNITS_IDLED_MULTIPLIER * UNIT_SLOWUPDATE_RATE;
 
-		// ss << "endless loop : " << endlessLoopReach << std::endl;
-		// log(ss.str());
-		// ss.str("");
-		// ss << "units idled (counter) : " << unitsIdledReach << std::endl;
-		// log(ss.str());
-		// ss.str("");
-		// ss << "endless_loop_frame_counter : " << endless_loop_frame_counter << std::endl;
-		// log(ss.str());
-		// ss.str("");
-		// ss << "units_idled_frame_counter : " << units_idled_frame_counter << std::endl;
-		// log(ss.str());
-		// ss.str("");
-		// ss << "mission_ended : " << missionEnded << std::endl;
-		// log(ss.str());
-		// ss.str("");
-		// ss << "proceed : " << tp.getProceed() << std::endl;
-		// log(ss.str());
-		// ss.str("");
-		// ss << "all units dead : " << allUnitsDead() << std::endl;
-		// log(ss.str());
-		// ss.str("");
-
-		// Check if compression is done, if so proceed compression result by computing feedback
-		// or storing expert solution
-		if (tp.compressionDone()) {
-			log("compression done");
-			// We indirectly keep trace parser "proceed" field to false
-			// Indeed, if units_idled_frame_counter is equal to -1 then we don't count how much time
-			// units are idled and then unitsIdledReach is always set to false. If a unit does something again
-			// units_idled_frame_counter will be set to 0 and the counter will be increase again (see below for details)
-			endless_loop_frame_counter = -1;
-			units_idled_frame_counter = -1;
-
+		// Check if compression is done
+		if (!tp.compressionDone()) {
+				// we don't ask to trace parser to proceed in the case of mission end because it will
+				// be automatically done when trace parser parse GAME_END event
+				if ((unitsIdledReach || allUnitsDead()) && !tp.getProceed()){
+					log("CProgAndPlay : ask parser to proceed");
+					// we ask trace parser to proceed all traces agregated from the last execution
+					tp.setProceed(true);
+				}
+		} else {
+			// compression is done then proceed compression result by computing feedback
+			// or storing expert solution
+			log("CProgAndPlay : compression done");
 			// if mission ended we stop thread. Indeed even if compression is done due to the fact that
 			// the thread detects a complete execution, the thread is steal running. Then we explicitely ask
 			// to stop now
@@ -216,19 +225,17 @@ void CProgAndPlay::Update(void) {
 				tp.setEnd();
 				tracesThread.join();
 				ppTraces.close();
+				// then the trace module is no longer initialized
+				traceModuleCorrectlyInitialized = false;
+				log("CProgAndPlay : turn off trace parser and set traceModuleCorrectlyInitialized to false");
 			}
-
-			// ss << "feedbacksWidgetEnabled : " << configHandler->GetString("PP Show Feedbacks", "disabled", true) << std::endl;
-			// log(ss.str());
-			// ss.str("");
 
 			const std::map<std::string,std::string>& modOpts = gameSetup->modOptions;
 
-			// If we are not in testing mode and feedback widget is enbaled => build the feedback and send it to Lua context
-			if (modOpts.find("testmap") == modOpts.end() && configHandler->GetString("PP Show Feedbacks", "disabled", true).compare("enabled") == 0) {
-				log("feedback widget is enabled : launch analysis of player's traces");
+			// If we are not in testing mode => build the feedback and send it to Lua context
+			if (!testMapMode) {
 				// inform trace analyser if we detect an endless loop
-				ta.setEndlessLoop(endlessLoopReach);
+				ta.setEndlessLoop(tracesComing && (missionEndedReach || unitsIdledReach || allUnitsDead()));
 				// load expert xml solutions
 				std::vector<std::string> experts_xml;
 				if (archiveLoaded) {
@@ -240,12 +247,12 @@ void CProgAndPlay::Update(void) {
 				}
 
 				std::string feedback = "";
-				if (!experts_xml.empty()) {
+				if (!experts_xml.empty() && newExecutionDetected) {
+					log("CProgAndPlay : expert compressed traces found and new execution detected => compute feedbacks");
 					// load learner xml solution
 					const std::string learner_xml = loadFile(springTracesPath + missionName + "_compressed.xml");
 					// compute feedbacks
 					feedback = ta.constructFeedback(learner_xml, experts_xml, -1, -1);
-					log("feedback determined");
 
 					// Write into file
 					std::ofstream jsonFile;
@@ -256,64 +263,57 @@ void CProgAndPlay::Update(void) {
 					}
 				}
 				else{
-					log("no expert compressed traces found: analysis aborted");
+					log("CProgAndPlay : no expert compressed traces found or no execution detected => analysis aborted");
 					// nothing more to do, we want to send an empty feedback
 				}
 				sendFeedback(feedback);
-			} else
-				log("testmap mode or feedback widget disabled: analysis aborted");
-
-
-			if (missionEnded && modOpts.find("testmap") != modOpts.end()) {
-				// TEST MOD : generating an expert solution for a mission
-				// move traces and compressed traces files to directory 'traces\data\expert\missionName'
-				bool dirExists = FileSystemHandler::mkdir(springDataPath);
-				log("Try to create: " + springExpertPath);
-				dirExists = FileSystemHandler::mkdir(springExpertPath);
-				if (dirExists) {
-					std::string path = springExpertPath + missionName;
-					log("Try to create: " + path);
-					dirExists = FileSystemHandler::mkdir(path);
+			} else {
+				log("testmap mode: no analysis required, only compression");
+				if (missionEnded) {
+					// generating an expert solution for a mission
+					// move traces and compressed traces files to directory 'traces\data\expert\missionName'
+					bool dirExists = FileSystemHandler::mkdir(springDataPath);
+					log("Try to create: " + springExpertPath);
+					dirExists = FileSystemHandler::mkdir(springExpertPath);
 					if (dirExists) {
-						// renommage avec le plus grand entier non utilisé dans le repertoire
-						int num = 1;
-						DIR *pdir;
-						struct dirent *pent;
-						pdir = opendir(path.c_str());
-						if (pdir) {
-							while ((pent = readdir(pdir))) {
-								std::string name = pent->d_name;
-								if (name.find(".xml") != std::string::npos) {
-									name.replace(name.find(".xml"), 4, "");
-									int file_num = strtol(name.c_str(),NULL,10);
-									if (file_num > 0)
-										num = file_num + 1;
+						std::string path = springExpertPath + missionName;
+						log("Try to create: " + path);
+						dirExists = FileSystemHandler::mkdir(path);
+						if (dirExists) {
+							// renommage avec le plus grand entier non utilisé dans le repertoire
+							int num = 1;
+							DIR *pdir;
+							struct dirent *pent;
+							pdir = opendir(path.c_str());
+							if (pdir) {
+								while ((pent = readdir(pdir))) {
+									std::string name = pent->d_name;
+									if (name.find(".xml") != std::string::npos) {
+										name.replace(name.find(".xml"), 4, "");
+										int file_num = strtol(name.c_str(),NULL,10);
+										if (file_num > 0)
+											num = file_num + 1;
+									}
 								}
 							}
+							closedir(pdir);
+
+							std::string oldName = springTracesPath + missionName + ".log";
+							std::string newName = path + "\\" + boost::lexical_cast<std::string>(num) + ".log";
+							if (rename(oldName.c_str(), newName.c_str()) == 0)
+								log("raw traces successfully renamed");
+							else
+								log("raw traces rename operation failed");
+
+							oldName = springTracesPath + missionName + "_compressed.xml";
+							newName = path + "\\" + boost::lexical_cast<std::string>(num) + ".xml";
+							if (rename(oldName.c_str(), newName.c_str()) == 0)
+								log("compressed traces successfully renamed");
+							else
+								log("compressed traces rename operation failed");
 						}
-						closedir(pdir);
-
-						std::string oldName = springTracesPath + missionName + ".log";
-						std::string newName = path + "\\" + boost::lexical_cast<std::string>(num) + ".log";
-						if (rename(oldName.c_str(), newName.c_str()) == 0)
-							log("raw traces successfully renamed");
-						else
-							log("raw traces rename operation failed");
-
-						oldName = springTracesPath + missionName + "_compressed.xml";
-						newName = path + "\\" + boost::lexical_cast<std::string>(num) + ".xml";
-						if (rename(oldName.c_str(), newName.c_str()) == 0)
-							log("compressed traces successfully renamed");
-						else
-							log("compressed traces rename operation failed");
 					}
 				}
-			}
-		} else {
-			if (missionEnded && unitsIdledReach){
-				// compression is not done but the mission is ended and all units are idled
-				// No feedback will be produced then we send an empty one
-				sendFeedback("");
 			}
 		}
 	}
@@ -339,6 +339,11 @@ void CProgAndPlay::Update(void) {
 	//log("ProgAndPLay::Update end");
 }
 
+void CProgAndPlay::needFeedback(){
+	allowFeedback = true;
+	units_idled_frame_counter = 0;
+}
+
 void CProgAndPlay::sendFeedback(std::string feedback){
 	// Add prefix to json string
 	feedback.insert(0,"Feedback_");
@@ -346,6 +351,10 @@ void CProgAndPlay::sendFeedback(std::string feedback){
 	std::vector<boost::uint8_t> data(feedback.size());
 	std::copy(feedback.begin(), feedback.end(), data.begin());
 	net->Send(CBaseNetProtocol::Get().SendLuaMsg(gu->myPlayerNum, LUA_HANDLE_ORDER_RULES, 0, data)); // processed by mission_runner.lua
+	// the feedback was sent the requirement of new feedback is satisfied
+	allowFeedback = false;
+	units_idled_frame_counter = -1;
+	newExecutionDetected = false;
 }
 
 /*
@@ -389,9 +398,9 @@ void CProgAndPlay::GamePaused(bool paused) {
 
 // this function is called in Game.cpp when the play starts
 void CProgAndPlay::TracePlayer() {
-	// if tracePlayer is active (this means the trace module is enabled) => push
+	// if traceModuleCorrectlyInitialized is active (this means the trace module is enabled) => push
 	// this value into the shared memory to enable trace in the client side
-	if (tracePlayer)
+	if (traceModuleCorrectlyInitialized)
 		PP_SetTracePlayer();
 }
 
@@ -798,91 +807,82 @@ bool CProgAndPlay::allUnitsDead() {
 	return tmp->size() == 0;
 }
 
-void CProgAndPlay::openTracesFile() {
-	log("ProgAndPLay::openTracesFile begin");
+void CProgAndPlay::initTracesFile() {
+	log("ProgAndPLay::initTracesFile begin");
 	const std::map<std::string,std::string>& modOpts = gameSetup->modOptions;
-	// Do this part only if traces analysis is enabled in mod options
-	if (modOpts.find("activetraces") != modOpts.end() && modOpts.at("activetraces").compare("1") == 0 && modOpts.find("missionname") != modOpts.end()) {
-		log("ProgAndPLay::traces analysis activated");
-		// build a directory to store traces
-		bool dirExists = FileSystemHandler::mkdir(springTracesPath);
-		if (dirExists) {
-			missionName = modOpts.at("missionname");
+	// build a directory to store traces
+	bool dirExists = FileSystemHandler::mkdir(springTracesPath);
+	if (dirExists) {
+		// try to load sdz file into the virtual file system in order to try to found
+		// local json file and local feedbacks
+		std::string mission_feedbacks_xml;
+		bool paramsJsonLoadedFromArchive = false;
+		if (vfsHandler->AddArchive(archivePath, false)) {
+			log("mod archive successfully loaded");
+			archiveLoaded = true;
 
+			// compression parameters loading from JSON for TracesParser check is in the archive
+			TracesParser::params_json = loadFileFromArchive(archiveParamsPath);
+			if (TracesParser::params_json.compare("") != 0){
+				paramsJsonLoadedFromArchive = true;
+				log("Compression params loaded from mod archive");
+			}
+
+			// If we are not in testmap mode, we load feedbacks xml files
+			if (!testMapMode) {
+				// We try to found a local feedback file for the loaded mission
+				// By convention only one file of this kind is included into the mission directory
+				std::vector<std::string> files = vfsHandler->GetFilesInDir(archiveExpertPath + missionName);
+				for (unsigned int i = 0; i < files.size(); i++) {
+					if (files.at(i).compare("feedbacks.xml") == 0) {
+						log("mission feedbacks loading from mod archive");
+						mission_feedbacks_xml = loadFileFromArchive(archiveExpertPath + missionName + "\\" + files.at(i));
+					}
+				}
+			} else
+				log("test mission in editor mode => no traces analysis only compression");
+		}
+		else
+			log("mod archive loading has failed");
+
+		// If Json aren't found into the archive then we check if it is into Spring directory.
+		if (!paramsJsonLoadedFromArchive){
+			TracesParser::params_json = loadFile(springParamsPath);
+			if (TracesParser::params_json.compare("") != 0)
+				log("compression params loaded from spring directory");
+			else
+				log("default compression params will be used");
+		}
+
+		// We load the global feedback file
+		const std::string feedbacks_xml = loadFile(springFeedbacksPath);
+		// If global feedback file is defined and we are not in testing mode, we push it to trace analyser
+		if (feedbacks_xml.compare("") != 0 && !testMapMode){
 			// defining langage for the analyser
 			ta.setLang((modOpts.find("language") != modOpts.end()) ? modOpts.at("language") : "en");
-
-			// try to load sdz file  in the virtual file system
-			if (vfsHandler->AddArchive(archivePath, false)) {
-				log("mod archive successfully loaded");
-				archiveLoaded = true;
-
-				// compression parameters loading from JSON for TracesParser
-				// first check is in the archive. second check is in Spring directory.
-				TracesParser::params_json = loadFileFromArchive(archiveParamsPath);
-				if (TracesParser::params_json.compare("") != 0)
-					log("compression params loaded from mod archive");
-				else {
-					TracesParser::params_json = loadFile(springParamsPath);
-					if (TracesParser::params_json.compare("") != 0)
-						log("compression params loaded from spring directory");
-					else
-						log("default compression params will be used");
-				}
-
-				// If we are not in testmap mode, we load feedbacks xml files
-				if (modOpts.find("testmap") == modOpts.end()) {
-					log("start feedbacks loading");
-
-					// First we load the global feedback file
-					const std::string feedbacks_xml = loadFile(springFeedbacksPath);
-
-					// Second we try to found a local feedback file for the loaded mission
-					// By convention only one file of this kind is included into the mission directory
-					std::string mission_feedbacks_xml;
-					std::vector<std::string> files = vfsHandler->GetFilesInDir(archiveExpertPath + missionName);
-					for (unsigned int i = 0; i < files.size(); i++) {
-						if (files.at(i).compare("feedbacks.xml") == 0) {
-							log("mission feedbacks loading from mod archive");
-							mission_feedbacks_xml = loadFileFromArchive(archiveExpertPath + missionName + "\\" + files.at(i));
-						}
-					}
-
-					// If we found at least the main feedback file, we push it to trace analyser
-					if (feedbacks_xml.compare("") != 0)
-						ta.loadXmlInfos(feedbacks_xml,mission_feedbacks_xml);
-					log("end feedbacks loading");
-				} else
-					log("test mission in editor mode => no traces analysis");
-			}
-			else
-				log("mod archive loading has failed");
-
-			// create a log file to store traces for this mission
-			std::stringstream ss;
-			ss << springTracesPath << missionName << ".log";
-			ppTraces.open(ss.str().c_str(), std::ios::out | std::ios::app | std::ios::ate);
-			if (ppTraces.is_open()) {
-				// mod options enables traces and trace file is openned => we consider that the trace module
-				// is properly initialized, then we set tracePlayer to true
-				tracePlayer = true;
-				startTime = std::time(NULL);
-				// init trace with first logs
-				ppTraces << GAME_START << " " << missionName << std::endl;
-				ppTraces << MISSION_START_TIME << " " << startTime << std::endl;
-				// thread creation
-				std::string dirName = springTracesPath;
-				dirName.erase(dirName.end()-1);
-				tracesThread = boost::thread(&TracesParser::parseTraceFileOffline, &tp, dirName, missionName+".log");
-			}
+			ta.loadXmlInfos(feedbacks_xml,mission_feedbacks_xml);
+			log("trace analyser initialized (language and feedbacks)");
 		}
-		else {
-			PP_SetError("ProgAndPlay::cannot create traces directory");
-			log(PP_GetError());
+
+		// create a log file to store traces for this mission
+		std::stringstream ss;
+		ss << springTracesPath << missionName << ".log";
+		ppTraces.open(ss.str().c_str(), std::ios::out | std::ios::app | std::ios::ate);
+		if (ppTraces.is_open()) {
+			// mod options enables traces and trace file is openned => we consider that the trace module
+			// is properly initialized, then we set traceModuleCorrectlyInitialized to true
+			traceModuleCorrectlyInitialized = true;
+			startTime = std::time(NULL);
+			// init trace with first logs
+			ppTraces << GAME_START << " " << missionName << std::endl;
+			ppTraces << MISSION_START_TIME << " " << startTime << std::endl;
 		}
-	} else
-		log("ProgAndPLay::traces analysis not activated");
-	log("ProgAndPLay::openTracesFile end");
+	}
+	else {
+		PP_SetError("ProgAndPlay::cannot create traces directory");
+		log(PP_GetError());
+	}
+	log("ProgAndPLay::initTracesFile end");
 }
 
 // Publish on facebook functions
