@@ -195,6 +195,14 @@ void CProgAndPlay::Update(void) {
 		log("CProgAndPlay : mission ended limit time exceed");
 	bool missionEndedReach = mission_ended_frame_counter > MISSION_ENDED_MULTIPLIER * UNIT_SLOWUPDATE_RATE;
 
+	// Check if user asks help by UI (see pp_show_feedback.lua)
+	bool askHelp = configHandler->GetString("helpPlease", "", true).compare("enabled") == 0;
+	if (askHelp){
+		log("CProgAndPlay : user ask help");
+		needFeedback();
+		configHandler->SetString("helpPlease", "", true); // reset help notifcation
+	}
+
 	if (traceModuleCorrectlyInitialized && allowFeedback){
 		// check if all units are idled
 		bool unitsIdled = allUnitsIdled();
@@ -205,14 +213,22 @@ void CProgAndPlay::Update(void) {
 			log("CProgAndPlay : units idle limit time exceed");
 		bool unitsIdledReach = units_idled_frame_counter > UNITS_IDLED_MULTIPLIER * UNIT_SLOWUPDATE_RATE;
 
+		const std::map<std::string,std::string>& modOpts = gameSetup->modOptions;
+
 		// Check if compression is done
 		if (!tp.compressionDone()) {
 				// we don't ask to trace parser to proceed in the case of mission end because it will
 				// be automatically done when trace parser parse GAME_END event
-				if ((unitsIdledReach || allUnitsDead()) && !tp.getProceed()){
+				if ((unitsIdledReach || allUnitsDead() || (askHelp && newExecutionDetected)) && !tp.getProceed()){
 					log("CProgAndPlay : ask parser to proceed");
 					// we ask trace parser to proceed all traces agregated from the last execution
 					tp.setProceed(true);
+				} else if (askHelp && !newExecutionDetected){
+					// build a feedback formated te be interpreted by widget
+					std::string feedback = "{\"feedbacks\": [\"Please execute your program before using help.\"]}";
+					if (modOpts.find("language") != modOpts.end() && modOpts.at("language").compare("fr") == 0)
+						feedback = "{\"feedbacks\": [\"Veuillez lancer votre programme avant d'utiliser l'aide.\"]}";
+					sendFeedback(feedback);
 				}
 		} else {
 			// compression is done then proceed compression result by computing feedback
@@ -229,8 +245,6 @@ void CProgAndPlay::Update(void) {
 				traceModuleCorrectlyInitialized = false;
 				log("CProgAndPlay : turn off trace parser and set traceModuleCorrectlyInitialized to false");
 			}
-
-			const std::map<std::string,std::string>& modOpts = gameSetup->modOptions;
 
 			// If we are not in testing mode => build the feedback and send it to Lua context
 			if (!testMapMode) {
