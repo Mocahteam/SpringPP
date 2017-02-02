@@ -225,9 +225,9 @@ void CProgAndPlay::Update(void) {
 					tp.setProceed(true);
 				} else if (askHelp && !newExecutionDetected){
 					// build a feedback formated te be interpreted by widget
-					std::string feedback = "{\"feedbacks\": [\"Please execute your program before using help.\"]}";
+					std::string feedback = "{\"feedbacks\": [\"Please execute a Prog&Play program before using help.\"]}";
 					if (modOpts.find("language") != modOpts.end() && modOpts.at("language").compare("fr") == 0)
-						feedback = "{\"feedbacks\": [\"Veuillez lancer votre programme avant d'utiliser l'aide.\"]}";
+						feedback = "{\"feedbacks\": [\"Veuillez lancer un programme Prog&Play avant d'utiliser l'aide.\"]}";
 					sendFeedback(feedback);
 				}
 		} else {
