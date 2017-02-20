@@ -559,7 +559,7 @@ void CProgAndPlay::UpdateUnit(CUnit* unit){
 		c = ALLY_COALITION;
 	else
 		c = ENEMY_COALITION;
-	if (c != ENEMY_COALITION){
+	if (c == MY_COALITION){
 		doUpdate(unit, c);
 	}
 	else {
