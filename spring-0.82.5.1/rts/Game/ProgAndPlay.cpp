@@ -280,6 +280,17 @@ void CProgAndPlay::Update(void) {
 					log("CProgAndPlay : no expert compressed traces found or no execution detected => analysis aborted");
 					// nothing more to do, we want to send an empty feedback
 				}
+				// we get compressed trace that produce these feedbacks and send it to widget
+				std::ostringstream oss_traces;
+				tp.display(oss_traces);
+				std::string tracesContent = oss_traces.str();
+				// prefix message
+				tracesContent.insert(0,"CompressedTraces_");
+				// Send compressedTrace to Lua (SendLuaRulesMsg function in LuaUnsyncedCtrl)
+				std::vector<boost::uint8_t> data(tracesContent.size());
+				std::copy(tracesContent.begin(), tracesContent.end(), data.begin());
+				net->Send(CBaseNetProtocol::Get().SendLuaMsg(gu->myPlayerNum, LUA_HANDLE_ORDER_RULES, 0, data)); // processed by mission_runner.lua
+				// Then send feedback to widget
 				sendFeedback(feedback);
 			} else {
 				log("testmap mode: no analysis required, only compression");
