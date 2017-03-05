@@ -116,6 +116,9 @@ class LuaUnsyncedCtrl {
 		static int SendLuaUIMsg(lua_State* L);
 		static int SendLuaGaiaMsg(lua_State* L);
 		static int SendLuaRulesMsg(lua_State* L);
+		// Muratet ---
+		static int SendModConstants(lua_State* L);
+		// ---
 
 		static int SetLastMessagePosition(lua_State* L);
 

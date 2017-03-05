@@ -76,8 +76,9 @@
 #include <boost/cstdint.hpp>
 #include <Platform/Misc.h>
 
-// Muratet (in order to access globalQuit) ---
-#include "SpringApp.h"
+// Muratet ---
+#include "SpringApp.h" // in order to access globalQuit
+#include "lib/pp/traces/Call.h" // in order to access Call::units_id_map, Call::orders_map and Call::resources_map
 // ---
 
 using namespace std;
@@ -179,6 +180,9 @@ bool LuaUnsyncedCtrl::PushEntries(lua_State* L)
 	REGISTER_LUA_CFUNC(SendLuaUIMsg);
 	REGISTER_LUA_CFUNC(SendLuaGaiaMsg);
 	REGISTER_LUA_CFUNC(SendLuaRulesMsg);
+	// Muratet ---
+	REGISTER_LUA_CFUNC(SendModConstants);
+	// ---
 
 	REGISTER_LUA_CFUNC(SetActiveCommand);
 
@@ -1632,7 +1636,7 @@ int LuaUnsyncedCtrl::Restart(lua_State* L)
 	//! else OpenAL soft crashs when using execlp
 	ISound::Shutdown();
 #endif
-	
+
 	// Muratet (fork process and launch execlp only in the child process) ---
 #ifndef _WIN32
 	if (fork() != 0)
@@ -1641,7 +1645,7 @@ int LuaUnsyncedCtrl::Restart(lua_State* L)
 		// launch execlp only in the child process
 #endif
 	// ---
-	
+
 	if (!script.empty())
 	{
 		const std::string scriptFullName = FileSystemHandler::GetInstance().GetWriteDir()+"script.txt";
@@ -1649,7 +1653,7 @@ int LuaUnsyncedCtrl::Restart(lua_State* L)
 		std::ofstream scriptfile(scriptFullName.c_str());
 		scriptfile << script;
 		scriptfile.close();
-		
+
 		//FIXME: ugly
 		// Muratet (Pass quote depending on system) ---
 #ifndef _WIN32
@@ -1683,7 +1687,7 @@ int LuaUnsyncedCtrl::Restart(lua_State* L)
 	//LogObject() << "Error in Restart: " << strerror(errno);
 	LogObject() << "The game should restart";
 	// ---
-	
+
 	lua_pushboolean(L, false);
 	return 1;
 }
@@ -2103,6 +2107,59 @@ int LuaUnsyncedCtrl::SendLuaRulesMsg(lua_State* L)
 	net->Send(CBaseNetProtocol::Get().SendLuaMsg(gu->myPlayerNum, LUA_HANDLE_ORDER_RULES, 0, data));
 	return 0;
 }
+
+// Muratet ---
+int LuaUnsyncedCtrl::SendModConstants(lua_State* L)
+{
+
+	if (!CheckModUICtrl()) {
+		return 0;
+	}
+
+	if (!lua_istable(L, 1)) {
+		luaL_error(L, "%s(): error first parameter is not a table", __FUNCTION__);
+	}
+	if (!lua_istable(L, 2)) {
+		luaL_error(L, "%s(): error second parameter is not a table", __FUNCTION__);
+	}
+
+	// Reset all maps
+	Call::orders_map.clear();
+	Call::units_id_map.clear();
+	Call::resources_map.clear();
+
+	// parse commands list
+	for (lua_pushnil(L); lua_next(L, 1) != 0; lua_pop(L, 1)) {
+		if (!lua_israwstring(L, -1) || !lua_isnumber(L, -2)){
+			luaL_error(L, "Incorrect arguments to %s. Commands list has to be table { [number]=string, ...}", __FUNCTION__);
+			return 0;
+		} else {
+			const string cmdName = lua_tostring(L, -1);
+			const int cmdCode = lua_toint(L, -2);
+			Call::orders_map.insert(std::make_pair<int,std::string>(cmdCode,cmdName));
+		}
+	}
+
+	// parse units type list
+	for (lua_pushnil(L); lua_next(L, 2) != 0; lua_pop(L, 1)) {
+		if (!lua_israwstring(L, -1) || !lua_israwnumber(L, -2)){
+			luaL_error(L, "Incorrect arguments to %s. UnitsType list has to be table { [number]=string, ...}", __FUNCTION__);
+			return 0;
+		} else {
+			const string unitTypeName = lua_tostring(L, -1);
+			const int unitTypeCode = lua_toint(L, -2);
+			Call::units_id_map.insert(std::make_pair<int,std::string>(unitTypeCode,unitTypeName));
+		}
+	}
+
+	// set default resources map
+	Call::resources_map.insert(std::make_pair<int,std::string>(0,"METAL"));
+	Call::resources_map.insert(std::make_pair<int,std::string>(1,"ENERGY"));
+
+	return 0;
+
+}
+// ---
 
 
 /******************************************************************************/
