@@ -37,14 +37,14 @@
 #include "LogOutput.h"
 
 const std::string archiveExpertPath = "traces\\expert\\";
-const std::string archiveParamsPath = "traces\\params.json";
+const std::string archiveCompParamsPath = "traces\\params.json";
 
 const std::string springTracesPath = "traces\\";
 const std::string springDataPath = "traces\\data\\";
-const std::string springParamsPath = "traces\\data\\params.json";
-const std::string springFeedbacksPath = "traces\\data\\feedbacks.xml";
+const std::string springDefaultCompParamsPath = "traces\\data\\params.json";
+const std::string springDefaultFeedbacksPath = "traces\\data\\feedbacks.xml";
 const std::string springExpertPath = "traces\\data\\expert\\";
-const std::string springFeedbackPath = "traces\\data\\feedback.json";
+const std::string springLastFeedbacksPath = "traces\\last_Feedback.json";
 
 const std::string server_name = "seriousgames.lip6.fr";
 const std::string server_path = "/facebook/build_image.php";
@@ -71,7 +71,7 @@ void log(std::string msg) {
 
 CProgAndPlay* pp;
 
-CProgAndPlay::CProgAndPlay() : loaded(false), updated(false), missionEnded(false), traceModuleCorrectlyInitialized(false), archiveLoaded(false), tp(true), ta(), tracesComing(false), newExecutionDetected(false) {
+CProgAndPlay::CProgAndPlay() : loaded(false), updated(false), missionEnded(false), traceModuleCorrectlyInitialized(false), tp(true), ta(), tracesComing(false), newExecutionDetected(false) {
 	log("ProgAndPLay constructor begin");
 
 	// initialisation of Prog&Play
@@ -252,12 +252,10 @@ void CProgAndPlay::Update(void) {
 				ta.setEndlessLoop(tracesComing && (missionEndedReach || unitsIdledReach || allUnitsDead()));
 				// load expert xml solutions
 				std::vector<std::string> experts_xml;
-				if (archiveLoaded) {
-					std::vector<std::string> files = vfsHandler->GetFilesInDir(archiveExpertPath + missionName);
-					for (unsigned int i = 0; i < files.size(); i++) {
-						if (files.at(i).find(".xml") != std::string::npos && files.at(i).compare("feedbacks.xml") != 0)
-							experts_xml.push_back(loadFileFromArchive(archiveExpertPath + missionName + "\\" + files.at(i)));
-					}
+				std::vector<std::string> files = vfsHandler->GetFilesInDir(archiveExpertPath + missionName);
+				for (unsigned int i = 0; i < files.size(); i++) {
+					if (files.at(i).find(".xml") != std::string::npos && files.at(i).compare("feedbacks.xml") != 0)
+						experts_xml.push_back(loadFileFromVfs(archiveExpertPath + missionName + "\\" + files.at(i)));
 				}
 
 				std::string feedback = "";
@@ -270,7 +268,7 @@ void CProgAndPlay::Update(void) {
 
 					// Write into file
 					std::ofstream jsonFile;
-					jsonFile.open(springFeedbackPath.c_str());
+					jsonFile.open(springLastFeedbacksPath.c_str());
 					if (jsonFile.good()) {
 						jsonFile << feedback;
 						jsonFile.close();
@@ -399,13 +397,11 @@ const std::string CProgAndPlay::loadFile(std::string full_path) {
 /*
  * Returns the content of the file located in the mod archive and identified by full_path as a string. The mod archive has to be loaded when the function is called.
  */
-const std::string CProgAndPlay::loadFileFromArchive(std::string full_path) {
+const std::string CProgAndPlay::loadFileFromVfs(std::string full_path) {
 	std::string res;
-	if (archiveLoaded) {
-		std::vector<boost::uint8_t> data;
-		if (vfsHandler->LoadFile(full_path, data))
-			res.assign(data.begin(), data.end());
-	}
+	std::vector<boost::uint8_t> data;
+	if (vfsHandler->LoadFile(full_path, data))
+		res.assign(data.begin(), data.end());
 	return res;
 }
 
@@ -838,55 +834,61 @@ void CProgAndPlay::initTracesFile() {
 	// build a directory to store traces
 	bool dirExists = FileSystemHandler::mkdir(springTracesPath);
 	if (dirExists) {
-		// try to load sdz file into the virtual file system in order to try to found
-		// local json file and local feedbacks
-		std::string mission_feedbacks_xml;
-		bool paramsJsonLoadedFromArchive = false;
-		if (vfsHandler->AddArchive(archivePath, false)) {
-			log("mod archive successfully loaded");
-			archiveLoaded = true;
-
-			// compression parameters loading from JSON for TracesParser check is in the archive
-			TracesParser::params_json = loadFileFromArchive(archiveParamsPath);
-			if (TracesParser::params_json.compare("") != 0){
-				paramsJsonLoadedFromArchive = true;
-				log("Compression params loaded from mod archive");
-			}
-
-			// If we are not in testmap mode, we load feedbacks xml files
-			if (!testMapMode) {
-				// We try to found a local feedback file for the loaded mission
-				// By convention only one file of this kind is included into the mission directory
-				std::vector<std::string> files = vfsHandler->GetFilesInDir(archiveExpertPath + missionName);
-				for (unsigned int i = 0; i < files.size(); i++) {
-					if (files.at(i).compare("feedbacks.xml") == 0) {
-						log("mission feedbacks loading from mod archive");
-						mission_feedbacks_xml = loadFileFromArchive(archiveExpertPath + missionName + "\\" + files.at(i));
-					}
-				}
-			} else
-				log("test mission in editor mode => no traces analysis only compression");
-		}
-		else
-			log("mod archive loading has failed");
-
-		// If Json aren't found into the archive then we check if it is into Spring directory.
-		if (!paramsJsonLoadedFromArchive){
-			TracesParser::params_json = loadFile(springParamsPath);
+		// Check if we are in testing mode
+		if (testMapMode){
+			// try to found local compression parameters (json file) in mission associated folder
+			TracesParser::params_json = loadFile(springExpertPath + missionName + "\\params.json");
 			if (TracesParser::params_json.compare("") != 0)
-				log("compression params loaded from spring directory");
-			else
-				log("default compression params will be used");
-		}
-
-		// We load the global feedback file
-		const std::string feedbacks_xml = loadFile(springFeedbacksPath);
-		// If global feedback file is defined and we are not in testing mode, we push it to trace analyser
-		if (feedbacks_xml.compare("") != 0 && !testMapMode){
-			// defining langage for the analyser
-			ta.setLang((modOpts.find("language") != modOpts.end()) ? modOpts.at("language") : "en");
-			ta.loadXmlInfos(feedbacks_xml,mission_feedbacks_xml);
-			log("trace analyser initialized (language and feedbacks)");
+				log("Specific mission compression params loaded");
+			else {
+				// try to found default compression parameters included into spring engine directory
+				TracesParser::params_json = loadFile(springDefaultCompParamsPath);
+				if (TracesParser::params_json.compare("") != 0)
+					log("Default compression params loaded from spring directory");
+				else
+					log("No compression params found builtin compression params will be used");
+			}
+			// No need to load feedbacks in testing mode
+			log("Test mission in editor mode => no traces analysis only compression");
+		} else {
+			// try to found local compression parameters (json file) in mission associated folder
+			TracesParser::params_json = loadFileFromVfs(archiveExpertPath + missionName + "\\params.json");
+			if (TracesParser::params_json.compare("") != 0)
+				log("Specific mission compression params loaded");
+			else {
+				// try to found default compression parameters included into mod archive
+				TracesParser::params_json = loadFileFromVfs(archiveCompParamsPath);
+				if (TracesParser::params_json.compare("") != 0)
+					log("Default compression params loaded from mod archive");
+				else{
+					// try to found default compression parameters included into spring engine directory
+					TracesParser::params_json = loadFile(springDefaultCompParamsPath);
+					if (TracesParser::params_json.compare("") != 0)
+						log("Default compression params loaded from spring directory");
+					else
+						log("No compression params found built-in compression params will be used");
+				}
+			}
+			// try to found local feedbacks from the mission tested
+			std::string mission_feedbacks_xml;
+			// We try to found a local feedback file for the loaded mission
+			// By convention only one file of this kind is included into the mission directory
+			std::vector<std::string> files = vfsHandler->GetFilesInDir(archiveExpertPath + missionName);
+			for (unsigned int i = 0; i < files.size(); i++) {
+				if (files.at(i).compare("feedbacks.xml") == 0) {
+					log("mission feedbacks loading from mod archive");
+					mission_feedbacks_xml = loadFileFromVfs(archiveExpertPath + missionName + "\\" + files.at(i));
+				}
+			}
+			// We load the global feedback file
+			const std::string feedbacks_xml = loadFile(springDefaultFeedbacksPath);
+			// If global feedback file is defined we push it to trace analyser
+			if (feedbacks_xml.compare("") != 0){
+				// defining langage for the analyser
+				ta.setLang((modOpts.find("language") != modOpts.end()) ? modOpts.at("language") : "en");
+				ta.loadXmlInfos(feedbacks_xml,mission_feedbacks_xml);
+				log("trace analyser initialized (language and feedbacks)");
+			}
 		}
 
 		// create a log file to store traces for this mission

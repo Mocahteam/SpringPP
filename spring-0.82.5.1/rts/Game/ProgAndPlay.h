@@ -49,7 +49,6 @@ private:
 	bool tracesComing;
 	bool testMapMode; // defines if we are in testing mode
 	bool allowFeedback;
-	bool archiveLoaded;
 	std::string photoFilename;
 	std::string archivePath;
 	std::string missionName;
@@ -69,7 +68,7 @@ private:
 	void needFeedback();
 	void sendFeedback(std::string feedback);
 	const std::string loadFile(std::string full_path);
-	const std::string loadFileFromArchive(std::string full_path);
+	const std::string loadFileFromVfs(std::string full_path);
 	void publishOnFacebook();
 	void sendRequestToServer();
 	void openFacebookUrl();

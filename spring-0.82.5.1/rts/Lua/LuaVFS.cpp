@@ -588,7 +588,7 @@ int LuaVFS::BuildPPGame(lua_State* L) {
 	const string modtype = luaL_checkstring(L, 9);
 
 	// Prepare file
-	const string modinfo = "return { game='" + name + "', shortGame='" + name + "', name='" + name + "', shortName='" + name + "', mutator='official', version='1.0', description='SPRED module. " + desc + "', url='http://www.irit.fr/ProgAndPlay/index_en.php', modtype=" + modtype + ", depend= { \"" + game + "\" },}";
+	const string modinfo = "return { game='" + name + "', shortGame='" + gameName + "', name='" + name + "', shortName='" + gameName + "', mutator='official', version='1.0', description='SPRED module. " + desc + "', url='http://www.irit.fr/ProgAndPlay/index_en.php', modtype=" + modtype + ", depend= { \"" + game + "\" },}";
 	const string gameFileName = "mods/" + gameName + ".sdz";
 
 	// Locate editor zip
@@ -690,13 +690,43 @@ int LuaVFS::BuildPPGame(lua_State* L) {
 		zipOpenNewFileInZip(gameZip, logZipPath.c_str(), zipfi, NULL, 0, NULL, 0, NULL, Z_DEFLATED, Z_BEST_COMPRESSION);
 		zipWriteInFileInZip(gameZip, logString.c_str(), logString.length());
 		zipCloseFileInZip(gameZip);
-		// Feedbacks
-		const string fbPath = "traces/data/expert/" + trace[0] + "/feedbacks.xml";
-		ifstream fbFile(fbPath.c_str());
-		string fbString((istreambuf_iterator<char>(fbFile)), istreambuf_iterator<char>());
-		const string fbZipPath = "traces/expert/" + trace[0] + "/feedbacks.xml";
-		zipOpenNewFileInZip(gameZip, fbZipPath.c_str(), zipfi, NULL, 0, NULL, 0, NULL, Z_DEFLATED, Z_BEST_COMPRESSION);
-		zipWriteInFileInZip(gameZip, fbString.c_str(), fbString.length());
+		// Add contextual feedbacks of the mission
+		const string localFbPath = "traces/data/expert/" + trace[0] + "/feedbacks.xml";
+		ifstream localFbFile(localFbPath.c_str());
+		string localFbString((istreambuf_iterator<char>(localFbFile)), istreambuf_iterator<char>());
+		if (localFbString.compare("") != 0){
+			const string localFbZipPath = "traces/expert/" + trace[0] + "/feedbacks.xml";
+			zipOpenNewFileInZip(gameZip, localFbZipPath.c_str(), zipfi, NULL, 0, NULL, 0, NULL, Z_DEFLATED, Z_BEST_COMPRESSION);
+			zipWriteInFileInZip(gameZip, localFbString.c_str(), localFbString.length());
+		}
+		// Add default feedbacks
+		const string defaultFbPath = "traces/data/feedbacks.xml";
+		ifstream defaultFbFile(defaultFbPath.c_str());
+		string defaultFbString((istreambuf_iterator<char>(defaultFbFile)), istreambuf_iterator<char>());
+		if (defaultFbString.compare("") != 0){
+			const string defaultFbZipPath = "traces/feedbacks.xml";
+			zipOpenNewFileInZip(gameZip, defaultFbZipPath.c_str(), zipfi, NULL, 0, NULL, 0, NULL, Z_DEFLATED, Z_BEST_COMPRESSION);
+			zipWriteInFileInZip(gameZip, defaultFbString.c_str(), defaultFbString.length());
+		}
+		// Add contextual compression params of the mission
+		const string localCpPath = "traces/data/expert/" + trace[0] + "/params.json";
+		ifstream localCpFile(localCpPath.c_str());
+		string localCpString((istreambuf_iterator<char>(localCpFile)), istreambuf_iterator<char>());
+		if (localCpString.compare("") != 0){
+			const string localCpZipPath = "traces/expert/" + trace[0] + "/params.json";
+			zipOpenNewFileInZip(gameZip, localCpZipPath.c_str(), zipfi, NULL, 0, NULL, 0, NULL, Z_DEFLATED, Z_BEST_COMPRESSION);
+			zipWriteInFileInZip(gameZip, localCpString.c_str(), localCpString.length());
+		}
+		// Add default compression params
+		const string defaultCpPath = "traces/data/params.json";
+		ifstream defaultCpFile(defaultCpPath.c_str());
+		string defaultCpString((istreambuf_iterator<char>(defaultCpFile)), istreambuf_iterator<char>());
+		if (defaultCpString.compare("") != 0){
+			const string defaultCpZipPath = "traces/params.json";
+			zipOpenNewFileInZip(gameZip, defaultCpZipPath.c_str(), zipfi, NULL, 0, NULL, 0, NULL, Z_DEFLATED, Z_BEST_COMPRESSION);
+			zipWriteInFileInZip(gameZip, defaultCpString.c_str(), defaultCpString.length());
+		}
+
 		zipCloseFileInZip(gameZip);
 	}
 
