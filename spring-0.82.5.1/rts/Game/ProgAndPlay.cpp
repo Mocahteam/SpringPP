@@ -547,7 +547,7 @@ void CProgAndPlay::AddUnit(CUnit* unit){
 	PP_Coalition c;
 	if (unit->team == gu->myTeam)
 		c = MY_COALITION;
-	else if (teamHandler->AlliedTeams(unit->team, gu->myTeam))
+	else if (teamHandler->AlliedTeams(gu->myTeam, unit->team))
 		c = ALLY_COALITION;
 	else
 		c = ENEMY_COALITION;
@@ -562,7 +562,7 @@ void CProgAndPlay::UpdateUnit(CUnit* unit){
 	PP_Coalition c;
 	if (unit->team == gu->myTeam)
 		c = MY_COALITION;
-	else if (teamHandler->AlliedTeams(unit->team, gu->myTeam))
+	else if (teamHandler->AlliedTeams(gu->myTeam, unit->team))
 		c = ALLY_COALITION;
 	else
 		c = ENEMY_COALITION;
