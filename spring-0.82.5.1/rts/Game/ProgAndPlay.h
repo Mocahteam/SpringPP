@@ -3,10 +3,10 @@
 #ifndef __PROG_AND_PLAY_H__
 #define __PROG_AND_PLAY_H__
 
-// used to define a delay to accept units idled
-#define UNITS_IDLED_MULTIPLIER 3
-// used to define a delay to accept mission end
-#define MISSION_ENDED_MULTIPLIER 2
+// used to define a delay (in seconds) to accept units idled
+#define UNITS_IDLED_TRIGGER 3
+// used to define a delay (in seconds) to accept mission end
+#define MISSION_ENDED_TRIGGER 2
 
 // Muratet (Define Class CProgAndPlay) ---
 
@@ -44,11 +44,12 @@ private:
 	bool loaded;
 	bool updated;
 	bool newExecutionDetected;
+	bool endExecutionDetected;
 	bool missionEnded;
 	bool traceModuleCorrectlyInitialized; // defines if trace module is correctly initialized
 	bool tracesComing;
 	bool testMapMode; // defines if we are in testing mode
-	bool allowFeedback;
+	bool onGoingCompression;
 	std::string photoFilename;
 	std::string archivePath;
 	std::string missionName;
@@ -65,7 +66,6 @@ private:
 	bool allUnitsIdled(); // returns true if all units' command queues are empty (units of the player)
 	bool allUnitsDead(); // returns true if the player has no units left in the game
 
-	void needFeedback();
 	void sendFeedback(std::string feedback);
 	const std::string loadFile(std::string full_path);
 	const std::string loadFileFromVfs(std::string full_path);

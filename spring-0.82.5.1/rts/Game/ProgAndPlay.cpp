@@ -71,7 +71,7 @@ void log(std::string msg) {
 
 CProgAndPlay* pp;
 
-CProgAndPlay::CProgAndPlay() : loaded(false), updated(false), missionEnded(false), traceModuleCorrectlyInitialized(false), tp(true), ta(), tracesComing(false), newExecutionDetected(false) {
+CProgAndPlay::CProgAndPlay() : loaded(false), updated(false), missionEnded(false), traceModuleCorrectlyInitialized(false), tp(true), ta(), tracesComing(false), newExecutionDetected(false), endExecutionDetected(false), onGoingCompression(false) {
 	log("ProgAndPLay constructor begin");
 
 	// initialisation of Prog&Play
@@ -125,16 +125,16 @@ CProgAndPlay::~CProgAndPlay() {
 	else
 		log("Prog&Play shut down and cleaned up");
   }
-  if (ppTraces.is_open()) {
+  if (traceModuleCorrectlyInitialized) {
 		if (!missionEnded) {
 			// Stop thread
 			tp.setEnd();
 			tracesThread.join();
-			// then the trace module is no longer initialized
-			traceModuleCorrectlyInitialized = false;
 		}
 		// Close traces file
 		ppTraces.close();
+		// then the trace module is no longer initialized
+		traceModuleCorrectlyInitialized = false;
   }
   logFile.close();
   log("ProgAndPLay destructor end");
@@ -148,30 +148,42 @@ void CProgAndPlay::Update(void) {
 	// try to identify new pull of traces
 	char * msg = PP_PopMessage();
 	bool tracesComing = msg != NULL;
-	// even if trace module is not artivated, we pop messages by security in order to
+	// even if trace module is not activated, we pop messages by security in order to
 	// avoid to fill shared memory in case of P&P client push traces whereas trace
 	// module is not activated.
 	while (msg != NULL) {
 		std::string line (msg);
-		if (line.find(EXECUTION_START_TIME) != std::string::npos){
-			log("CProgAndPlay : new execution detected");
-			needFeedback();
-			newExecutionDetected = true;
-		}
-		// we send traces to the parser only if feedbacks are allowed
-		if (ppTraces.good() && (allowFeedback ||
-			 	line.find(GAME_START) != std::string::npos ||
-				line.find(MISSION_START_TIME) != std::string::npos)) {
-			// we send this log to the parser
-			if (missionEnded)
-				ppTraces << DELAYED << " ";
-			// Write this message on traces file
-			ppTraces << msg << std::endl;
+		if (traceModuleCorrectlyInitialized){
+			if (line.find(EXECUTION_START_TIME) != std::string::npos){ // if we detect a new P&P program execution
+				log("CProgAndPlay : new execution detected");
+				newExecutionDetected = true;
+				endExecutionDetected = false;
+				units_idled_frame_counter = 0; // by setting units_idled_frame_counter to 0 we enable computing of units idle
+			}
+			// we send traces to the parser if traces received are included between an EXECUTION_START_TIME and EXECUTION_END_TIME events
+			if (newExecutionDetected && !endExecutionDetected) {
+				// we send this log to the parser
+				if (missionEnded)
+					ppTraces << DELAYED << " ";
+				// Write this message on traces file
+				ppTraces << msg << std::endl;
+			}
+			if (line.find(EXECUTION_END_TIME) != std::string::npos){ // if we detect the end of the P&P program execution
+				log("CProgAndPlay : end execution detected");
+				endExecutionDetected = true;
+			}
 		}
 		// free memory storing this message
 		delete[] msg;
 		// Get next message
 		msg = PP_PopMessage();
+	}
+
+	// Check if user asks help by UI (see pp_show_feedback.lua)
+	bool askHelp = configHandler->GetString("helpPlease", "", true).compare("enabled") == 0;
+	if (askHelp){
+		log("CProgAndPlay : user ask help");
+		configHandler->SetString("helpPlease", "", true); // reset help notifcation
 	}
 
 	// Check if mission is ended. This depends on engine state (game->gameOver) and/or
@@ -180,76 +192,76 @@ void CProgAndPlay::Update(void) {
 		std::string victoryState = configHandler->GetString("victoryState", "", true);
 		if (victoryState.compare("") != 0 || game->gameOver) {
 			// Log end messages
-			if (ppTraces.good()) {
+			if (traceModuleCorrectlyInitialized) {
 				ppTraces << MISSION_END_TIME << " " << startTime + (int)std::floor(gu->PP_modGameTime) << std::endl;
 				ppTraces << GAME_END << " " << victoryState << " " << missionName << std::endl;
 			}
 			log ("CProgAndPlay : missionEnded set to true");
 			missionEnded = true;
-			needFeedback();
 		}
-	} else
-		mission_ended_frame_counter++;
+		mission_ended_frame_counter = 0; // reset mission ended counter
+	} else{
+		if (mission_ended_frame_counter > -1){ // check if we have to compute mission ended
+			mission_ended_frame_counter++;
+			std::stringstream ss;
+			ss <<"mission_ended_frame_counter : " << mission_ended_frame_counter;
+			log (ss.str());
+		}
+	}
 	// compute if we reach limits to accept end mission (usefull to take in account endless loop)
-	if (mission_ended_frame_counter-1 <= MISSION_ENDED_MULTIPLIER * UNIT_SLOWUPDATE_RATE && mission_ended_frame_counter > MISSION_ENDED_MULTIPLIER * UNIT_SLOWUPDATE_RATE)
+	if ((mission_ended_frame_counter-1)/GAME_SPEED < MISSION_ENDED_TRIGGER && mission_ended_frame_counter/GAME_SPEED >= MISSION_ENDED_TRIGGER)
 		log("CProgAndPlay : mission ended limit time exceed");
-	bool missionEndedReach = mission_ended_frame_counter > MISSION_ENDED_MULTIPLIER * UNIT_SLOWUPDATE_RATE;
+	bool missionEndedReach = mission_ended_frame_counter/GAME_SPEED >= MISSION_ENDED_TRIGGER;
 
-	// Check if user asks help by UI (see pp_show_feedback.lua)
-	bool askHelp = configHandler->GetString("helpPlease", "", true).compare("enabled") == 0;
-	if (askHelp){
-		log("CProgAndPlay : user ask help");
-		needFeedback();
-		configHandler->SetString("helpPlease", "", true); // reset help notifcation
+	if (traceModuleCorrectlyInitialized) {
+		// check if all units are idled or destroyed
+		bool unitsIdled = allUnitsIdled() || allUnitsDead();
+		if (units_idled_frame_counter > -1){ // check if we have to compute units idle
+			if (unitsIdled){
+				units_idled_frame_counter++; // increase counter to know how much time all units are idled
+				std::stringstream ss;
+				ss <<"units_idled_frame_counter : " << units_idled_frame_counter;
+				log (ss.str());
+			}
+			else
+			  units_idled_frame_counter = 0; // reset units idle counter
+		}
+		// compute if we reach limits to accept idle units
+		if ((units_idled_frame_counter - 1)/GAME_SPEED < UNITS_IDLED_TRIGGER && units_idled_frame_counter/GAME_SPEED >= UNITS_IDLED_TRIGGER)
+			log("CProgAndPlay : units idle limit time exceed");
+		bool unitsIdledReach = units_idled_frame_counter/GAME_SPEED >= UNITS_IDLED_TRIGGER;
+
+		// Check if we have to start compression
+		if (newExecutionDetected && (missionEndedReach || unitsIdledReach || askHelp) && !onGoingCompression){
+			log("CProgAndPlay : ask parser to proceed and compress traces");
+			// we ask trace parser to proceed all traces agregated from the last new execution event
+			tp.setProceed(true);
+			onGoingCompression = true;
+		}
 	}
 
-	if (traceModuleCorrectlyInitialized && allowFeedback){
-		// check if all units are idled
-		bool unitsIdled = allUnitsIdled();
-		if (unitsIdled && units_idled_frame_counter > -1)
-			units_idled_frame_counter++; // increase counter to know how much time all units are idled
-		// compute if we reach limits to accept idle units
-		if (units_idled_frame_counter-1 <= UNITS_IDLED_MULTIPLIER * UNIT_SLOWUPDATE_RATE && units_idled_frame_counter > UNITS_IDLED_MULTIPLIER * UNIT_SLOWUPDATE_RATE)
-			log("CProgAndPlay : units idle limit time exceed");
-		bool unitsIdledReach = units_idled_frame_counter > UNITS_IDLED_MULTIPLIER * UNIT_SLOWUPDATE_RATE;
-
-		const std::map<std::string,std::string>& modOpts = gameSetup->modOptions;
-
-		// Check if compression is done
-		if (!tp.compressionDone()) {
-				// we don't ask to trace parser to proceed in the case of mission end because it will
-				// be automatically done when trace parser parse GAME_END event
-				if ((unitsIdledReach || allUnitsDead() || (askHelp && newExecutionDetected)) && !tp.getProceed()){
-					log("CProgAndPlay : ask parser to proceed");
-					// we ask trace parser to proceed all traces agregated from the last execution
-					tp.setProceed(true);
-				} else if (askHelp && !newExecutionDetected){
-					// build a feedback formated te be interpreted by widget
-					std::string feedback = "{\"feedbacks\": [\"Please execute a Prog&Play program before using help.\"]}";
-					if (modOpts.find("language") != modOpts.end() && modOpts.at("language").compare("fr") == 0)
-						feedback = "{\"feedbacks\": [\"Veuillez lancer un programme Prog&Play avant d'utiliser l'aide.\"]}";
-					sendFeedback(feedback);
-				}
-		} else {
+	// Check if it's time to launch analysis of compressed traces
+	if (onGoingCompression){
+		if (tp.compressionDone()){
 			// compression is done then proceed compression result by computing feedback
 			// or storing expert solution
 			log("CProgAndPlay : compression done");
-			// if mission ended we stop thread. Indeed even if compression is done due to the fact that
-			// the thread detects a complete execution, the thread is steal running. Then we explicitely ask
-			// to stop now
-			if (missionEnded) {
+			onGoingCompression = false;
+			// if mission ended we stop thread. Indeed even if compression is done, the
+			// thread is steal running. Then we explicitely ask to stop now
+			if (missionEnded && traceModuleCorrectlyInitialized) {
+				log("CProgAndPlay : turn off trace parser and set traceModuleCorrectlyInitialized to false");
 				tp.setEnd();
 				tracesThread.join();
 				ppTraces.close();
 				// then the trace module is no longer initialized
 				traceModuleCorrectlyInitialized = false;
-				log("CProgAndPlay : turn off trace parser and set traceModuleCorrectlyInitialized to false");
 			}
 
 			// If we are not in testing mode => build the feedback and send it to Lua context
 			if (!testMapMode) {
 				// inform trace analyser if we detect an endless loop
-				ta.setEndlessLoop(tracesComing && (missionEndedReach || unitsIdledReach || allUnitsDead()));
+				ta.setEndlessLoop(tracesComing && !endExecutionDetected);
 				// load expert xml solutions
 				std::vector<std::string> experts_xml;
 				std::vector<std::string> files = vfsHandler->GetFilesInDir(archiveExpertPath + missionName);
@@ -259,13 +271,12 @@ void CProgAndPlay::Update(void) {
 				}
 
 				std::string feedback = "";
-				if (!experts_xml.empty() && newExecutionDetected) {
-					log("CProgAndPlay : expert compressed traces found and new execution detected => compute feedbacks");
+				if (!experts_xml.empty()) {
+					log("CProgAndPlay : expert compressed traces found => compute feedbacks");
 					// load learner xml solution
 					const std::string learner_xml = loadFile(springTracesPath + missionName + "_compressed.xml");
 					// compute feedbacks
 					feedback = ta.constructFeedback(learner_xml, experts_xml, -1, -1);
-
 					// Write into file
 					std::ofstream jsonFile;
 					jsonFile.open(springLastFeedbacksPath.c_str());
@@ -275,10 +286,13 @@ void CProgAndPlay::Update(void) {
 					}
 				}
 				else{
-					log("CProgAndPlay : no expert compressed traces found or no execution detected => analysis aborted");
+					log("CProgAndPlay : no expert compressed traces found => analysis aborted");
 					// nothing more to do, we want to send an empty feedback
 				}
-				// we get compressed trace that produce these feedbacks and send it to widget
+				// Send feedback to Lua
+				sendFeedback(feedback);
+
+				// we get compressed trace that produce these feedbacks and send it to Lua
 				std::ostringstream oss_traces;
 				tp.display(oss_traces);
 				std::string tracesContent = oss_traces.str();
@@ -288,8 +302,6 @@ void CProgAndPlay::Update(void) {
 				std::vector<boost::uint8_t> data(tracesContent.size());
 				std::copy(tracesContent.begin(), tracesContent.end(), data.begin());
 				net->Send(CBaseNetProtocol::Get().SendLuaMsg(gu->myPlayerNum, LUA_HANDLE_ORDER_RULES, 0, data)); // processed by mission_runner.lua
-				// Then send feedback to widget
-				sendFeedback(feedback);
 			} else {
 				log("testmap mode: no analysis required, only compression");
 				if (missionEnded) {
@@ -339,6 +351,25 @@ void CProgAndPlay::Update(void) {
 				}
 			}
 		}
+	} else {
+		// No on going compression means no execution detected and so...
+		// ...if player asks help we send him a feedback to ask him to execute a program first
+		if (askHelp){
+			log("CProgAndPlay : no on going compression but player ask help => send feedback to advise launching P&P program");
+			// build a feedback formated te be interpreted by widget
+			std::string feedback = "{\"feedbacks\": [\"Please execute a Prog&Play program before using help.\"]}";
+			const std::map<std::string,std::string>& modOpts = gameSetup->modOptions;
+			if (modOpts.find("language") != modOpts.end() && modOpts.at("language").compare("fr") == 0)
+				feedback = "{\"feedbacks\": [\"Veuillez lancer un programme Prog&Play avant d'utiliser l'aide.\"]}";
+			sendFeedback(feedback);
+		}
+		// ...if mission end exceeds the time limit we send and empty feedback to refresh UI. This occurs for exemple
+		// when a player end a mission by end (without P&P program) in this case the Widget waiting feedback and we
+		// send it an empty one
+		if (missionEndedReach){
+			log("CProgAndPlay : no on going compression but mission end => send an empty feedback");
+			sendFeedback("");
+		}
 	}
 
 	// check if the player has click on the publish tab. It can happen only if the mission is ended.
@@ -362,11 +393,6 @@ void CProgAndPlay::Update(void) {
 	//log("ProgAndPLay::Update end");
 }
 
-void CProgAndPlay::needFeedback(){
-	allowFeedback = true;
-	units_idled_frame_counter = 0;
-}
-
 void CProgAndPlay::sendFeedback(std::string feedback){
 	// Add prefix to json string
 	feedback.insert(0,"Feedback_");
@@ -374,10 +400,13 @@ void CProgAndPlay::sendFeedback(std::string feedback){
 	std::vector<boost::uint8_t> data(feedback.size());
 	std::copy(feedback.begin(), feedback.end(), data.begin());
 	net->Send(CBaseNetProtocol::Get().SendLuaMsg(gu->myPlayerNum, LUA_HANDLE_ORDER_RULES, 0, data)); // processed by mission_runner.lua
+	log ("CProgAndPlay (send feedback):");
+	log (feedback);
 	// the feedback was sent the requirement of new feedback is satisfied
-	allowFeedback = false;
 	units_idled_frame_counter = -1;
+	mission_ended_frame_counter = -1;
 	newExecutionDetected = false;
+	endExecutionDetected = false;
 }
 
 /*
@@ -409,7 +438,7 @@ void CProgAndPlay::GamePaused(bool paused) {
 	int ret = PP_SetGamePaused(paused);
 	if (ret == -1)
 		return;
-	if (ppTraces.is_open()) {
+	if (traceModuleCorrectlyInitialized) {
 		if (paused)
 			ppTraces << GAME_PAUSED << std::endl;
 		else

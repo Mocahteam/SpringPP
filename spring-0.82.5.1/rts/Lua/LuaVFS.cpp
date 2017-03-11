@@ -721,7 +721,7 @@ int LuaVFS::BuildPPGame(lua_State* L) {
 		const string defaultFbZipPath = "traces/feedbacks.xml";
 		zipOpenNewFileInZip(gameZip, defaultFbZipPath.c_str(), zipfi, NULL, 0, NULL, 0, NULL, Z_DEFLATED, Z_BEST_COMPRESSION);
 		zipWriteInFileInZip(gameZip, defaultFbString.c_str(), defaultFbString.length());
-		zipWriteInFileInZip(gameZip, defaultFbString.c_str(), defaultFbString.length());
+		zipCloseFileInZip(gameZip);
 	}
 	// Add default compression params
 	const string defaultCpPath = "traces/data/params.json";
@@ -730,8 +730,8 @@ int LuaVFS::BuildPPGame(lua_State* L) {
 	if (defaultCpString.compare("") != 0){
 		const string defaultCpZipPath = "traces/params.json";
 		zipOpenNewFileInZip(gameZip, defaultCpZipPath.c_str(), zipfi, NULL, 0, NULL, 0, NULL, Z_DEFLATED, Z_BEST_COMPRESSION);
-		zipWriteInFileInZip(gameZip, defaultFbString.c_str(), defaultFbString.length());
 		zipWriteInFileInZip(gameZip, defaultCpString.c_str(), defaultCpString.length());
+		zipCloseFileInZip(gameZip);
 	}
 
 	// Close game zip

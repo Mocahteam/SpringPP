@@ -76,7 +76,9 @@ void TracesParser::endParse() {
 }
 
 void TracesParser::writeFiles() {
-	display(osParser);
+	#ifdef DEBUG
+		display(osParser);
+	#endif
 	std::string s = "\\" + filename;
 	s.replace(s.find(".log"), 4, "_compressed.txt");
 	s.insert(0, dir_path);
@@ -203,8 +205,8 @@ void TracesParser::readTracesOfflineInGame() {
 					handleTraceOffline(spt);
 			}
 		}
-		// check if a new execution or a new mission was detected and if we have to proceed traces
-		if (spe_eme || (change && proceed)) {
+		// check if we have to compress agregate traces
+		if (change && proceed) {
 			// Check if an end mission event have been detected
 			if (spe_eme) {
 				// if so, we try to detect and compress sequences
