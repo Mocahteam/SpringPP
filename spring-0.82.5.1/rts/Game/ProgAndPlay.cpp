@@ -35,6 +35,7 @@
 #include "FileSystem/FileSystemHandler.h"
 #include "GlobalUnsynced.h"
 #include "LogOutput.h"
+#include "Lua/LuaHandle.h"
 
 const std::string archiveExpertPath = "traces\\expert\\";
 const std::string archiveCompParamsPath = "traces\\params.json";
@@ -201,12 +202,8 @@ void CProgAndPlay::Update(void) {
 		}
 		mission_ended_frame_counter = 0; // reset mission ended counter
 	} else{
-		if (mission_ended_frame_counter > -1){ // check if we have to compute mission ended
+		if (mission_ended_frame_counter > -1) // check if we have to compute mission ended
 			mission_ended_frame_counter++;
-			std::stringstream ss;
-			ss <<"mission_ended_frame_counter : " << mission_ended_frame_counter;
-			log (ss.str());
-		}
 	}
 	// compute if we reach limits to accept end mission (usefull to take in account endless loop)
 	if ((mission_ended_frame_counter-1)/GAME_SPEED < MISSION_ENDED_TRIGGER && mission_ended_frame_counter/GAME_SPEED >= MISSION_ENDED_TRIGGER)
@@ -217,12 +214,8 @@ void CProgAndPlay::Update(void) {
 		// check if all units are idled or destroyed
 		bool unitsIdled = allUnitsIdled() || allUnitsDead();
 		if (units_idled_frame_counter > -1){ // check if we have to compute units idle
-			if (unitsIdled){
+			if (unitsIdled)
 				units_idled_frame_counter++; // increase counter to know how much time all units are idled
-				std::stringstream ss;
-				ss <<"units_idled_frame_counter : " << units_idled_frame_counter;
-				log (ss.str());
-			}
 			else
 			  units_idled_frame_counter = 0; // reset units idle counter
 		}
@@ -293,15 +286,12 @@ void CProgAndPlay::Update(void) {
 				sendFeedback(feedback);
 
 				// we get compressed trace that produce these feedbacks and send it to Lua
-				std::ostringstream oss_traces;
-				tp.display(oss_traces);
-				std::string tracesContent = oss_traces.str();
+				std::string learner_compressed_txt = loadFile(springTracesPath + missionName + "_compressed.txt");
 				// prefix message
-				tracesContent.insert(0,"CompressedTraces_");
-				// Send compressedTrace to Lua (SendLuaRulesMsg function in LuaUnsyncedCtrl)
-				std::vector<boost::uint8_t> data(tracesContent.size());
-				std::copy(tracesContent.begin(), tracesContent.end(), data.begin());
-				net->Send(CBaseNetProtocol::Get().SendLuaMsg(gu->myPlayerNum, LUA_HANDLE_ORDER_RULES, 0, data)); // processed by mission_runner.lua
+				learner_compressed_txt.insert(0,"CompressedTraces_");
+				std::vector<boost::uint8_t> data(learner_compressed_txt.size());
+				std::copy(learner_compressed_txt.begin(), learner_compressed_txt.end(), data.begin());
+				CLuaHandle::HandleLuaMsg(gu->myPlayerNum, LUA_HANDLE_ORDER_RULES, 0, data); // processed by mission_runner.lua
 			} else {
 				log("testmap mode: no analysis required, only compression");
 				if (missionEnded) {
@@ -399,9 +389,7 @@ void CProgAndPlay::sendFeedback(std::string feedback){
 	// Send feedback to Lua (SendLuaRulesMsg function in LuaUnsyncedCtrl)
 	std::vector<boost::uint8_t> data(feedback.size());
 	std::copy(feedback.begin(), feedback.end(), data.begin());
-	net->Send(CBaseNetProtocol::Get().SendLuaMsg(gu->myPlayerNum, LUA_HANDLE_ORDER_RULES, 0, data)); // processed by mission_runner.lua
-	log ("CProgAndPlay (send feedback):");
-	log (feedback);
+	CLuaHandle::HandleLuaMsg(gu->myPlayerNum, LUA_HANDLE_ORDER_RULES, 0, data);// processed by mission_runner.lua
 	// the feedback was sent the requirement of new feedback is satisfied
 	units_idled_frame_counter = -1;
 	mission_ended_frame_counter = -1;
@@ -412,7 +400,7 @@ void CProgAndPlay::sendFeedback(std::string feedback){
 /*
  * Returns the content of the file identified by full_path as a string
  */
-const std::string CProgAndPlay::loadFile(std::string full_path) {
+std::string CProgAndPlay::loadFile(std::string full_path) {
 	std::string res;
 	std::ifstream in(full_path.c_str());
 	if (in.good()) {
@@ -426,7 +414,7 @@ const std::string CProgAndPlay::loadFile(std::string full_path) {
 /*
  * Returns the content of the file located in the mod archive and identified by full_path as a string. The mod archive has to be loaded when the function is called.
  */
-const std::string CProgAndPlay::loadFileFromVfs(std::string full_path) {
+std::string CProgAndPlay::loadFileFromVfs(std::string full_path) {
 	std::string res;
 	std::vector<boost::uint8_t> data;
 	if (vfsHandler->LoadFile(full_path, data))

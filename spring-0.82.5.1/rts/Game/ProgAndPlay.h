@@ -67,8 +67,8 @@ private:
 	bool allUnitsDead(); // returns true if the player has no units left in the game
 
 	void sendFeedback(std::string feedback);
-	const std::string loadFile(std::string full_path);
-	const std::string loadFileFromVfs(std::string full_path);
+	std::string loadFile(std::string full_path);
+	std::string loadFileFromVfs(std::string full_path);
 	void publishOnFacebook();
 	void sendRequestToServer();
 	void openFacebookUrl();
