@@ -39,6 +39,7 @@
 
 const std::string archiveExpertPath = "traces\\expert\\";
 const std::string archiveCompParamsPath = "traces\\params.json";
+const std::string archiveFeedbacksPath = "traces\\feedbacks.xml";
 
 const std::string springTracesPath = "traces\\";
 const std::string springDataPath = "traces\\data\\";
@@ -455,8 +456,8 @@ PP_ShortUnit buildShortUnit(CUnit *unit, PP_Coalition c){
 		tmpUnit.type = unit->unitDef->id;
 	else
 		tmpUnit.type = -1;
-	tmpUnit.pos.x = unit->midPos.x;
-	tmpUnit.pos.y = unit->midPos.z;
+	tmpUnit.pos.x = unit->pos.x;
+	tmpUnit.pos.y = unit->pos.z;
 	tmpUnit.health = unit->health;
 	tmpUnit.maxHealth = unit->maxHealth;
 	// write command queue and group
@@ -846,11 +847,12 @@ bool CProgAndPlay::allUnitsDead() {
 }
 
 void CProgAndPlay::initTracesFile() {
-	log("ProgAndPLay::initTracesFile begin");
+	log("CProgAndPLay::initTracesFile begin");
 	const std::map<std::string,std::string>& modOpts = gameSetup->modOptions;
 	// build a directory to store traces
 	bool dirExists = FileSystemHandler::mkdir(springTracesPath);
 	if (dirExists) {
+		bool defaultFeedbacksFound = false;
 		// Check if we are in testing mode
 		if (testMapMode){
 			// try to found local compression parameters (json file) in mission associated folder
@@ -893,14 +895,28 @@ void CProgAndPlay::initTracesFile() {
 			std::vector<std::string> files = vfsHandler->GetFilesInDir(archiveExpertPath + missionName);
 			for (unsigned int i = 0; i < files.size(); i++) {
 				if (files.at(i).compare("feedbacks.xml") == 0) {
-					log("mission feedbacks loading from mod archive");
+					log("Specific mission feedbacks loaded from mod archive");
 					mission_feedbacks_xml = loadFileFromVfs(archiveExpertPath + missionName + "\\" + files.at(i));
 				}
 			}
-			// We load the global feedback file
-			const std::string feedbacks_xml = loadFile(springDefaultFeedbacksPath);
-			// If global feedback file is defined we push it to trace analyser
+			// We load the global feedback file, first we try to find it in mods archive
+			std::string feedbacks_xml = loadFileFromVfs(archiveFeedbacksPath);
 			if (feedbacks_xml.compare("") != 0){
+				log("Default feedbacks loaded from mod archive");
+				defaultFeedbacksFound = true;
+			}
+			else{
+				// try to found default feedbacks included into spring engine directory
+				feedbacks_xml = loadFile(springDefaultFeedbacksPath);
+				if (feedbacks_xml.compare("") != 0){
+					log("Default feedbacks loaded from spring directory");
+					defaultFeedbacksFound = true;
+				}
+				else
+					log("WARNING!!! No default feedbacks are available => no analysis will be possible. Check your installation...");
+			}
+			// If global feedback file is defined we push it to trace analyser
+			if (defaultFeedbacksFound){
 				// defining langage for the analyser
 				ta.setLang((modOpts.find("language") != modOpts.end()) ? modOpts.at("language") : "en");
 				ta.loadXmlInfos(feedbacks_xml,mission_feedbacks_xml);
@@ -912,7 +928,7 @@ void CProgAndPlay::initTracesFile() {
 		std::stringstream ss;
 		ss << springTracesPath << missionName << ".log";
 		ppTraces.open(ss.str().c_str(), std::ios::out | std::ios::app | std::ios::ate);
-		if (ppTraces.is_open()) {
+		if (ppTraces.is_open() && (testMapMode || defaultFeedbacksFound)) {
 			// mod options enables traces and trace file is openned => we consider that the trace module
 			// is properly initialized, then we set traceModuleCorrectlyInitialized to true
 			traceModuleCorrectlyInitialized = true;
@@ -926,7 +942,7 @@ void CProgAndPlay::initTracesFile() {
 		PP_SetError("ProgAndPlay::cannot create traces directory");
 		log(PP_GetError());
 	}
-	log("ProgAndPLay::initTracesFile end");
+	log("CProgAndPLay::initTracesFile end");
 }
 
 // Publish on facebook functions
