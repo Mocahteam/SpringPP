@@ -36,6 +36,9 @@
 #include "Game/CameraHandler.h"
 #include "Game/Camera/CameraController.h"
 #include "Game/Game.h"
+// Muratet ---
+#include "Game/GameServer.h"
+// ---
 #include "Game/SelectedUnits.h"
 #include "Game/PlayerHandler.h"
 #include "Game/UI/CommandColors.h"
@@ -1635,6 +1638,9 @@ int LuaUnsyncedCtrl::Restart(lua_State* L)
 #ifdef _WIN32
 	//! else OpenAL soft crashs when using execlp
 	ISound::Shutdown();
+	// Muratet (else UDP is not closed when using execlp) ---
+	delete gameServer;
+	// ---
 #endif
 
 	// Muratet (fork process and launch execlp only in the child process) ---

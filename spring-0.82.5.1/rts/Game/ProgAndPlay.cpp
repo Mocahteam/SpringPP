@@ -292,7 +292,7 @@ void CProgAndPlay::Update(void) {
 				learner_compressed_txt.insert(0,"CompressedTraces_");
 				std::vector<boost::uint8_t> data(learner_compressed_txt.size());
 				std::copy(learner_compressed_txt.begin(), learner_compressed_txt.end(), data.begin());
-				CLuaHandle::HandleLuaMsg(gu->myPlayerNum, LUA_HANDLE_ORDER_RULES, 0, data); // processed by mission_runner.lua
+				CLuaHandle::HandleLuaMsg(gu->myPlayerNum, LUA_HANDLE_ORDER_UI, 0, data); // processed by pp_meta_traces_manager.lua
 			} else {
 				log("testmap mode: no analysis required, only compression");
 				if (missionEnded) {
@@ -390,7 +390,7 @@ void CProgAndPlay::sendFeedback(std::string feedback){
 	// Send feedback to Lua (SendLuaRulesMsg function in LuaUnsyncedCtrl)
 	std::vector<boost::uint8_t> data(feedback.size());
 	std::copy(feedback.begin(), feedback.end(), data.begin());
-	CLuaHandle::HandleLuaMsg(gu->myPlayerNum, LUA_HANDLE_ORDER_RULES, 0, data);// processed by mission_runner.lua
+	CLuaHandle::HandleLuaMsg(gu->myPlayerNum, LUA_HANDLE_ORDER_UI, 0, data);// processed by pp_gui_main_menu.lua
 	// the feedback was sent the requirement of new feedback is satisfied
 	units_idled_frame_counter = -1;
 	mission_ended_frame_counter = -1;

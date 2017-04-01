@@ -4824,7 +4824,12 @@ void CGame::GameEnd()
 	{
 		gameOver=true;
 		eventHandler.GameOver();
-		new CEndGameBox();
+		// Muratet (We display end game box only if gameMode is not opened) ---
+		if  (gameSetup->gameMode != GameMode::OpenEnd){
+			new CEndGameBox();
+		}
+		//new CEndGameBox();
+		// ---
 #ifdef    HEADLESS
 		profiler.PrintProfilingInfo();
 #endif // HEADLESS
