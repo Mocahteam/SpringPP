@@ -200,6 +200,10 @@ bool LuaUnsyncedCtrl::PushEntries(lua_State* L)
 
 	REGISTER_LUA_CFUNC(Restart);
 
+	// Muratet (available in 83+) ---
+	REGISTER_LUA_CFUNC(SetWMCaption);
+	// ---
+
 	REGISTER_LUA_CFUNC(SetUnitDefIcon);
 	REGISTER_LUA_CFUNC(SetUnitDefImage);
 
@@ -1700,6 +1704,16 @@ int LuaUnsyncedCtrl::Restart(lua_State* L)
 
 /******************************************************************************/
 
+// Muratet ---
+int LuaUnsyncedCtrl::SetWMCaption(lua_State* L)
+{
+	const string name = luaL_checkstring(L, 1);
+	SDL_WM_SetCaption(name.c_str(), NULL);
+	return 0;
+}
+// ---
+
+/******************************************************************************/
 int LuaUnsyncedCtrl::SetUnitDefIcon(lua_State* L)
 {
 	if (!CheckModUICtrl()) {

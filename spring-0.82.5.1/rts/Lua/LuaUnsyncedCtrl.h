@@ -84,6 +84,10 @@ class LuaUnsyncedCtrl {
 
 		static int Restart(lua_State* L);
 
+		// Muratet (available in 83+) ---
+		static int SetWMCaption(lua_State* L);
+		// ---
+
 		static int SetUnitDefIcon(lua_State* L);
 		static int SetUnitDefImage(lua_State* L);
 
