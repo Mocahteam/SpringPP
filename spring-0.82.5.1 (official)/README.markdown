@@ -8,6 +8,8 @@ bugs, community forum and everything spring related.
 
 The version available in this repository is a fork of the original Spring engine with Prog&Play functionalities. Visit the [Prog&Play homepage](https://www.irit.fr/ProgAndPlay/index.php?LANG=en) for details.
 
+Binaries are available at: <https://www.irit.fr/ProgAndPlay/download.php?LANG=en>
+
 ### Compiling on Windows
 
 Softwares Required:
