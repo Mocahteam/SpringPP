@@ -1,4 +1,4 @@
-# Spring RTS game engine with Prog&Play integration
+# Spring RTS game engine with Prog&Play
 
 ## README
 
@@ -37,35 +37,30 @@ When compiling ends, the game is installed into "C:\Program Files\Spring" (defau
 
 #### Get Dependencies
 
-Programs necessary to build
-
-* Xcode (Only for MacOSX)
-* cmake
-* 7zip (aka p7zip or 7z)
-* The usual build toolchain
-    * gcc (MacOSX: comes with Xcode tools)
-    * make (MacOSX: comes with Xcode tools)
-
-Libraries (install development packages)
-
-* SDL
-* boost (tested with version 1.42)
-    * thread
-    * regex
-    * signals
-    * system
-    * program-options
-* DevIL (IL, ILU)
-* OpenAL (openal-soft, older openal-0.0.8 does not work - MacOSX: Please check the OpenAL section for MacOSX specific info)
-* OpenGL headers (mesa, GLEW, etc. - MacOSX: comes with Xcode tools)
-* zlib
-* freetype (2)
-* ogg, vorbis and vorbisfile
-
-For IAs
-
-* python (2.5+)
-* jdk (1.5+ - pre-installed on OSX)
+* Programs necessary to build
+    * Xcode (Only for MacOSX)
+    * cmake
+    * 7zip (aka p7zip or 7z)
+    * The usual build toolchain
+        * gcc (MacOSX: comes with Xcode tools)
+        * make (MacOSX: comes with Xcode tools)
+* Libraries (install development packages)
+    * SDL
+    * boost (tested with version 1.42)
+        * thread
+        * regex
+        * signals
+        * system
+        * program-options
+    * DevIL (IL, ILU)
+    * OpenAL (openal-soft, older openal-0.0.8 does not work - MacOSX: Please check the OpenAL section for MacOSX specific info)
+    * OpenGL headers (mesa, GLEW, etc. - MacOSX: comes with Xcode tools)
+    * zlib
+    * freetype (2)
+    * ogg, vorbis and vorbisfile
+* For IAs
+    * python (2.5+)
+    * jdk (1.5+ - pre-installed on OSX)
 
 #### Build and install
 
