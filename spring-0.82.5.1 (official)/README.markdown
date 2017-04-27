@@ -1,41 +1,90 @@
-# Spring RTS game engine
+# Spring RTS game engine with Prog&Play integration
 
 ## README
 
 Spring (formerly TASpring) is an Open Source Real Time Strategy game engine.
-Visit our [project homepage](http://springrts.com/) for help, suggestions,
+Visit the [project homepage](http://springrts.com/) for help, suggestions,
 bugs, community forum and everything spring related.
 
-### Compiling
+The version available in this repository is a fork of the original Spring engine with Prog&Play functionalities. Visit the [Prog&Play homepage](https://www.irit.fr/Prog&Play/index.php?LANG=en) for details.
 
-Detailed instructions for how to compile Spring can be found [here](http://springrts.com/wiki/Building_spring)
+### Compiling on Windows
 
-The most simple set of commands will be:
+Softwares Required:
 
-	cmake .
-	make
+* CMake (version 2.6)
+* Java jdk
 
-### Installation
+Download following archive ([MinGW-gcc4.4.zip](https://www.irit.fr/ProgAndPlay/ressources/MinGW-gcc4.4.zip)), it contains g++ compiler based on MinGW. Unzip this archive at the root of the drive "C:\". Update your environment variables:
 
-Usually, you want to use an installer or a package prepared for your OS:
+* Create a new variable named MINGW with "C:\MinGW-gcc4.4" as value;
+* Update your PATH by adding in first value: "%MINGW%\bin".
+	
+Run "CMake (cmake-gui)":
 
-* Windows: <http://springrts.com/wiki/Download>
-* Linux:   <http://springrts.com/wiki/SetupGuide>
+* Set path to game engine source code;
+* Set path where to build the binaries;
+* Click on "configure" (perhaps you will click again to resolve all errors);
+* Then Click on "Generate".
 
-If you want to compile and install from source, please see [this wiki page](http://springrts.com/wiki/Building_spring)
+Open a console (cmd.exe), cd into your build directory and compile with:
 
-The most simple set of commands will be:
+	mingw32-make install-spring
 
-	make install
+When compiling ends, the game is installed into "C:\Program Files\Spring" (default). Into this directory create two subdirectories "maps" and "mods". Donwload following archive ([GamesAndMaps_3.zip](https://www.irit.fr/ProgAndPlay/ressources/GamesAndMaps_3.zip)) and move all files included into "mods" directory into your "mods" directory and all files included into "maps" directory into your "maps" directory. Now you can play the game...
 
-### Using
+### Compiling on Linux and MacOSX
 
-Use a lobby client for playing single- or multi-player matches.
-A list of lobbies may be found [here](http://springrts.com/wiki/Lobby_Development#Lobby_client_development)
+#### Get Dependencies
 
-Once you are in-game, Spring games basically work like every other RTS,
-though it has [a LOT of additional ways of control and customizability](http://springrts.com/wiki/Using_Spring).
+Programs necessary to build
 
-### Notes
+* Xcode (Only for MacOSX)
+* cmake
+* 7zip (aka p7zip or 7z)
+* The usual build toolchain
+    * gcc (MacOSX: comes with Xcode tools)
+    * make (MacOSX: comes with Xcode tools)
 
-A more extensive readme can be found [here](http://springrts.com/wiki/Read_Me_First).
+Libraries (install development packages)
+
+* SDL
+* boost (tested with version 1.42)
+    * thread
+    * regex
+    * signals
+    * system
+    * program-options
+* DevIL (IL, ILU)
+* OpenAL (openal-soft, older openal-0.0.8 does not work - MacOSX: Please check the OpenAL section for MacOSX specific info)
+* OpenGL headers (mesa, GLEW, etc. - MacOSX: comes with Xcode tools)
+* zlib
+* freetype (2)
+* ogg, vorbis and vorbisfile
+
+For IAs
+
+* python (2.5+)
+* jdk (1.5+ - pre-installed on OSX)
+
+#### Build and install
+
+	Last successful build on Linux: Kubuntu 10.04
+	Last successful build on MacOSX: never tested
+
+Hope it always compiles!!!
+
+Default compiling process with CMake (2.6 or newer)
+
+* Configure:
+    * cmake .
+* Install:
+    * make install-spring
+* Default install paths are:
+    * Spring executable: /usr/local/bin/spring
+    * Read-only data: /usr/local/share/games/spring
+    * If you want /usr prefix instead of /usr/local, configure like this:
+        * cmake -DCMAKE_INSTALL_PREFIX=/usr .
+
+Into your read-only data directory create two subdirectories "maps" and "mods". Donwload following archive ([GamesAndMaps_3.zip](https://www.irit.fr/ProgAndPlay/ressources/GamesAndMaps_3.zip)) and move all files included into "mods" directory into your "mods" directory and all files included into "maps" directory into your "maps" directory. Now you can play the game...
+
