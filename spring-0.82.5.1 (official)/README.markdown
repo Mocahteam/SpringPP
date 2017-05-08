@@ -6,7 +6,7 @@ Spring (formerly TASpring) is an Open Source Real Time Strategy game engine.
 Visit the [project homepage](http://springrts.com/) for help, suggestions,
 bugs, community forum and everything spring related.
 
-The version available in this repository is a fork of the original Spring engine with Prog&Play functionalities. Visit the [Prog&Play homepage](https://www.irit.fr/ProgAndPlay/index.php) for details.
+The version available in this repository is a fork of the original Spring engine with Prog&Play functionalities. Visit the [Prog&Play homepage](https://www.irit.fr/ProgAndPlay/index_en.php) for details.
 
 Binaries are available at: <https://www.irit.fr/ProgAndPlay/download.php?LANG=en>
 
