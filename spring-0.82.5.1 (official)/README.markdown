@@ -6,9 +6,9 @@ Spring (formerly TASpring) is an Open Source Real Time Strategy game engine.
 Visit the [project homepage](http://springrts.com/) for help, suggestions,
 bugs, community forum and everything spring related.
 
-The version available in this repository is a fork of the original Spring engine with Prog&Play functionalities. Visit the [Prog&Play homepage](https://www.irit.fr/ProgAndPlay/index_en.php) for details.
+The version available in this repository is a fork of the original Spring engine with Prog&Play functionalities. Visit the [Prog&Play homepage](http://progandplay.lip6.fr/index_en.php) for details.
 
-Binaries are available at: <https://www.irit.fr/ProgAndPlay/download.php?LANG=en>
+Binaries are available at: <http://progandplay.lip6.fr/download.php?LANG=en>
 
 ### Compiling on Windows
 
@@ -17,7 +17,7 @@ Softwares Required:
 * CMake (version 2.6)
 * Java jdk
 
-Download following archive ([MinGW-gcc4.4.zip](https://www.irit.fr/ProgAndPlay/ressources/MinGW-gcc4.4.zip)), it contains g++ compiler based on MinGW. Unzip this archive at the root of the drive "C:\". Update your environment variables:
+Download following archive ([MinGW-gcc4.4.zip](http://progandplay.lip6.fr/ressources/MinGW-gcc4.4.zip)), it contains g++ compiler based on MinGW. Unzip this archive at the root of the drive "C:\". Update your environment variables:
 
 * Create a new variable named MINGW with "C:\MinGW-gcc4.4" as value;
 * Update your PATH by adding in first value: "%MINGW%\bin".
@@ -33,7 +33,7 @@ Open a console (cmd.exe), cd into your build directory and compile with:
 
 	mingw32-make install-spring
 
-When compiling ends, the game is installed into "C:\Program Files\Spring" (default). Into this directory create two subdirectories "maps" and "mods". Donwload following archive ([GamesAndMaps_3.zip](https://www.irit.fr/ProgAndPlay/ressources/GamesAndMaps_3.zip)) and move all files included into "mods" directory into your "mods" directory and all files included into "maps" directory into your "maps" directory. Now you can play the game...
+When compiling ends, the game is installed into "C:\Program Files\Spring" (default). Into this directory create two subdirectories "maps" and "mods". Donwload following archive ([GamesAndMaps_3.zip](http://progandplay.lip6.fr/ressources/GamesAndMaps_3.zip)) and move all files included into "mods" directory into your "mods" directory and all files included into "maps" directory into your "maps" directory. Now you can play the game...
 
 ### Compiling on Linux and MacOSX
 
@@ -83,5 +83,5 @@ Default compiling process with CMake (2.6 or newer)
     * If you want /usr prefix instead of /usr/local, configure like this:
         * cmake -DCMAKE_INSTALL_PREFIX=/usr .
 
-Into your read-only data directory create two subdirectories "maps" and "mods". Donwload following archive ([GamesAndMaps_3.zip](https://www.irit.fr/ProgAndPlay/ressources/GamesAndMaps_3.zip)) and move all files included into "mods" directory into your "mods" directory and all files included into "maps" directory into your "maps" directory. Now you can play the game...
+Into your read-only data directory create two subdirectories "maps" and "mods". Donwload following archive ([GamesAndMaps_3.zip](http://progandplay.lip6.fr/ressources/GamesAndMaps_3.zip)) and move all files included into "mods" directory into your "mods" directory and all files included into "maps" directory into your "maps" directory. Now you can play the game...
 
