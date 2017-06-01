@@ -160,7 +160,7 @@ public:
 
 	GLuint CreateTexture();
 
-	void AddGlyph(unsigned int& index, int& xsize, int& ysize, unsigned char* pixels, int& pitch);
+	void AddGlyph(unsigned int& index, const int& xsize, const int& ysize, unsigned char* pixels, const int& pitch);
 	void GetGlyph(unsigned int& index, CglFont::GlyphInfo* g) const;
 
 	int texWidth, texHeight;
@@ -278,7 +278,7 @@ void CFontTextureRenderer::GetGlyph(unsigned int& index, CglFont::GlyphInfo* g) 
 }
 
 
-void CFontTextureRenderer::AddGlyph(unsigned int& index, int& xsize, int& ysize, unsigned char* pixels, int& pitch)
+void CFontTextureRenderer::AddGlyph(unsigned int& index, const int& xsize, const int& ysize, unsigned char* pixels, const int& pitch)
 {
 	GlyphInfo& g = glyphs[index];
 	g.xsize = xsize;

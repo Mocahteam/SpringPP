@@ -56,7 +56,7 @@ const std::string facebookUrl = "https://www.facebook.com/dialog/feed";
 const std::string appId = "1199712723374964";
 const std::string caption = "Essaye de faire mieux. Clique ici pour en savoir plus sur ProgAndPlay";
 const std::string description = "ProgAndPlay est une bibliotheque de fonctions pour les jeux de Strategie Temps Reel (STR). Elle permet au joueur de programmer de maniere simple et interactive les entites virtuelles d'un STR. Actuellement...";
-const std::string link = "https://www.irit.fr/ProgAndPlay/";
+const std::string pplink = "https://www.irit.fr/ProgAndPlay/";
 const std::string redirect_uri = "https://www.facebook.com/";
 
 std::ofstream logFile("log.txt", std::ios::out | std::ofstream::trunc);
@@ -948,7 +948,7 @@ void CProgAndPlay::initTracesFile() {
 // Publish on facebook functions
 
 void CProgAndPlay::openFacebookUrl() {
-	std::string url = facebookUrl+"?app_id="+appId+"&display=page&caption="+caption+"&description="+description+"&link="+link+"&href="+link+"&redirect_uri="+redirect_uri+"&picture="+server_name+server_images_path+photoFilename;
+	std::string url = facebookUrl+"?app_id="+appId+"&display=page&caption="+caption+"&description="+description+"&link="+pplink+"&href="+pplink+"&redirect_uri="+redirect_uri+"&picture="+server_name+server_images_path+photoFilename;
 	#ifdef __linux__
 		std::string cmd = "x-www-browser " + url;
 		system(cmd.c_str());

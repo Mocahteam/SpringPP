@@ -139,7 +139,9 @@ macro    (GetListOfSubModules list_var)
 
 	# Strip away the "/CMakeLists.txt" parts, so we end up with just a list of dirs,
 	# for example: AAI;RAI;KAIK
-	string(REPLACE "//CMakeLists.txt" "" ${list_var} "${${list_var}}")
+	# GLOB can prefix with "//" or "/" (perhaps changed in cmake 3.1.0), this double replace will support both "//" and "/"
+	string(REPLACE "/CMakeLists.txt" "" ${list_var} "${${list_var}}")
+	string(REPLACE "/" "" ${list_var} "${${list_var}}")
 endmacro (GetListOfSubModules list_var)
 
 

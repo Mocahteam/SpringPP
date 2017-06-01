@@ -20,7 +20,9 @@
 #include "System/FileSystem/ArchiveScanner.h"
 #include "System/ConfigHandler.h"
 #include <boost/thread.hpp>
+#ifdef _WIN32
 #include <windows.h>
+#endif
 #include <boost/asio.hpp>
 
 class CProgAndPlay

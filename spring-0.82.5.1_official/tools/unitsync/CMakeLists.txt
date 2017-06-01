@@ -80,4 +80,4 @@ if (MINGW)
 endif (MINGW)
 install (TARGETS unitsync DESTINATION ${LIBDIR})
 
-Add_Subdirectory(test)
+#Add_Subdirectory(test)

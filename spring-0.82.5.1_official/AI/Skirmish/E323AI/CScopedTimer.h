@@ -11,6 +11,15 @@
 #include "headers/Defines.h"
 #include "headers/HAIInterface.h"
 #include "headers/HEngine.h"
+#include "boost/version.hpp"
+#if BOOST_VERSION < 105000
+#include "boost/thread/xtime.hpp"
+namespace boost {
+	enum xtime_compat {
+		TIME_UTC_=TIME_UTC
+	};
+}
+#endif
 
 #define PROFILE(x) CScopedTimer t(std::string(#x), ai->cb);
 
@@ -71,7 +80,7 @@ class CScopedTimer {
 
 		static unsigned int GetEngineRuntimeMillis() {
 			boost::xtime t;
-			boost::xtime_get(&t, boost::TIME_UTC);
+			boost::xtime_get(&t, boost::TIME_UTC_);
 			const unsigned int milliSeconds = t.sec * 1000 + (t.nsec / 1000000);   
 			return milliSeconds;
 		}

@@ -56,7 +56,7 @@ LIST(APPEND engineCommonLibraries lua 7zip oscpack minizip streflop lobby pp-sup
 
 IF    (UNIX)
 	# Needed for dynamically loading shared libraries (on some OS)
-	LIST(APPEND engineCommonLibraries dl)
+	LIST(APPEND engineCommonLibraries dl rt)
 ENDIF (UNIX)
 
 IF (MINGW)
