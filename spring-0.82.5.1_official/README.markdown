@@ -41,42 +41,37 @@ When compiling ends, the game is installed into "C:\Program Files\Spring" (defau
 
 * Programs necessary to build
     * Xcode (Only for MacOSX)
-    * cmake
+    * cmake (tested with version 3.5.1)
     * 7zip (aka p7zip or 7z)
     * The usual build toolchain
         * gcc (MacOSX: comes with Xcode tools)
         * make (MacOSX: comes with Xcode tools)
 * Libraries (install development packages)
-    * SDL
-    * boost (tested with version 1.42)
-        * thread
-        * regex
-        * signals
-        * system
-        * program-options
+    * SDL (tested with version 1.2)
+    * Boost (tested with version 1.58)
     * DevIL (IL, ILU)
-    * OpenAL (openal-soft, older openal-0.0.8 does not work - MacOSX: Please check the OpenAL section for MacOSX specific info)
+    * OpenAL
     * OpenGL headers (mesa, GLEW, etc. - MacOSX: comes with Xcode tools)
     * zlib
     * freetype (2)
     * ogg, vorbis and vorbisfile
+    * Rapidxml (tested with v1.13)
+    * Rapidjson (tested with v0.12)
 * For IAs
     * python (2.5+)
     * jdk (1.5+ - pre-installed on OSX)
 
 #### Build and install
 
-	Last successful build on Linux: Kubuntu 10.04
+	Last successful build on Linux: Ubuntu 16.04
 	Last successful build on MacOSX: never tested
-
-Hope it always compiles!!!
 
 Default compiling process with CMake (2.6 or newer)
 
 * Configure:
     * cmake .
 * Install:
-    * make install-spring
+    * sudo make install-spring
 * Default install paths are:
     * Spring executable: /usr/local/bin/spring
     * Read-only data: /usr/local/share/games/spring
