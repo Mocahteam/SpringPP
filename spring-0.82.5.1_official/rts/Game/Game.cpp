@@ -2787,11 +2787,13 @@ bool CGame::Update()
 	const unsigned difTime = (timeNow - lastModGameTimeMeasure);
 	const float dif = skipping ? 0.010f : (float)difTime * 0.001f;
 
+	// Meresse
+	gu->PP_modGameTime += dif * gs->speedFactor;
+	pp->UpdateTimestamp();
+	//
+	
 	if (!gs->paused) {
 		gu->modGameTime += dif * gs->speedFactor;
-		// Meresse
-		pp->UpdateTimestamp();
-		//
 	}
 
 	gu->gameTime += dif;
