@@ -92,7 +92,9 @@ CProgAndPlay::CProgAndPlay() : loaded(false), updated(false), missionEnded(false
   const std::map<std::string,std::string>& modOpts = gameSetup->modOptions;
 
 	// init tracesOn depending on activetraces field in mod options
-	bool tracesOn = modOpts.find("activetraces") != modOpts.end() && modOpts.at("activetraces").compare("1") == 0;
+	//bool tracesOn = modOpts.find("activetraces") != modOpts.end() && modOpts.at("activetraces").compare("1") == 0;
+	// For experimentation purpose we force engine to build feedback and compute score even if traces are not active
+	bool tracesOn=true;
 
 	// Check if we are in testing mode
 	testMapMode = modOpts.find("testmap") != modOpts.end();
@@ -185,7 +187,7 @@ void CProgAndPlay::Update(void) {
 	bool askHelp = configHandler->GetString("helpPlease", "", true).compare("enabled") == 0;
 	if (askHelp){
 		log("CProgAndPlay : user ask help");
-		configHandler->SetString("helpPlease", "", true); // reset help notifcation
+		configHandler->SetString("helpPlease", "", true); // reset help notification
 	}
 
 	// Check if mission is ended. This depends on engine state (game->gameOver) and/or
@@ -206,7 +208,7 @@ void CProgAndPlay::Update(void) {
 		if (mission_ended_frame_counter > -1) // check if we have to compute mission ended
 			mission_ended_frame_counter++;
 	}
-	// compute if we reach limits to accept end mission (usefull to take in account endless loop)
+	// compute if we reach limits to accept end mission (useful to take in account endless loop)
 	if ((mission_ended_frame_counter-1)/GAME_SPEED < MISSION_ENDED_TRIGGER && mission_ended_frame_counter/GAME_SPEED >= MISSION_ENDED_TRIGGER)
 		log("CProgAndPlay : mission ended limit time exceed");
 	bool missionEndedReach = mission_ended_frame_counter/GAME_SPEED >= MISSION_ENDED_TRIGGER;
@@ -228,7 +230,7 @@ void CProgAndPlay::Update(void) {
 		// Check if we have to start compression
 		if (newExecutionDetected && (missionEndedReach || unitsIdledReach || askHelp) && !onGoingCompression){
 			log("CProgAndPlay : ask parser to proceed and compress traces");
-			// we ask trace parser to proceed all traces agregated from the last new execution event
+			// we ask trace parser to proceed all traces aggregated from the last new execution event
 			tp.setProceed(true);
 			onGoingCompression = true;
 		}
@@ -242,7 +244,7 @@ void CProgAndPlay::Update(void) {
 			log("CProgAndPlay : compression done");
 			onGoingCompression = false;
 			// if mission ended we stop thread. Indeed even if compression is done, the
-			// thread is steal running. Then we explicitely ask to stop now
+			// thread is steal running. Then we explicitly ask to stop now
 			if (missionEnded && traceModuleCorrectlyInitialized) {
 				log("CProgAndPlay : turn off trace parser and set traceModuleCorrectlyInitialized to false");
 				tp.setEnd();
@@ -283,10 +285,10 @@ void CProgAndPlay::Update(void) {
 					log("CProgAndPlay : no expert compressed traces found => analysis aborted");
 					// nothing more to do, we want to send an empty feedback
 				}
-				// Send feedback to Lua
+				// Send feedback to Lua to display it on UI
 				sendFeedback(feedback);
 
-				// we get compressed trace that produce these feedbacks and send it to Lua
+				// we get compressed trace that produce these feedbacks and send it to Lua to write it in logs
 				std::string learner_compressed_txt = loadFile(springTracesPath + missionName + "_compressed.txt");
 				// prefix message
 				learner_compressed_txt.insert(0,"CompressedTraces_");
@@ -306,7 +308,7 @@ void CProgAndPlay::Update(void) {
 						log("Try to create: " + path);
 						dirExists = FileSystemHandler::mkdir(path);
 						if (dirExists) {
-							// renommage avec le plus grand entier non utilisé dans le repertoire
+							// find the greater number unused in this folder
 							int num = 1;
 							DIR *pdir;
 							struct dirent *pent;
@@ -354,8 +356,8 @@ void CProgAndPlay::Update(void) {
 				feedback = "{\"feedbacks\": [\"Veuillez lancer un programme Prog&Play avant d'utiliser l'aide.\"]}";
 			sendFeedback(feedback);
 		}
-		// ...if mission end exceeds the time limit we send and empty feedback to refresh UI. This occurs for exemple
-		// when a player end a mission by end (without P&P program) in this case the Widget waiting feedback and we
+		// ...if mission end exceeds the time limit we send and empty feedback to refresh UI. This occurs for example
+		// when a player end a mission by hand (without P&P program) in this case the Widget waiting feedback and we
 		// send it an empty one
 		if (missionEndedReach){
 			log("CProgAndPlay : no on going compression but mission end => send an empty feedback");
@@ -407,7 +409,7 @@ std::string CProgAndPlay::loadFile(std::string full_path) {
 	if (in.good()) {
 		std::string line;
 		while(std::getline(in,line))
-			res += line;
+			res += line+"\n";
 	}
 	return res;
 }
@@ -865,7 +867,7 @@ void CProgAndPlay::initTracesFile() {
 				if (TracesParser::params_json.compare("") != 0)
 					log("Default compression params loaded from spring directory");
 				else
-					log("No compression params found builtin compression params will be used");
+					log("No compression params found built-in compression params will be used");
 			}
 			// No need to load feedbacks in testing mode
 			log("Test mission in editor mode => no traces analysis only compression");
@@ -929,7 +931,7 @@ void CProgAndPlay::initTracesFile() {
 		ss << springTracesPath << missionName << ".log";
 		ppTraces.open(ss.str().c_str(), std::ios::out | std::ios::app | std::ios::ate);
 		if (ppTraces.is_open() && (testMapMode || defaultFeedbacksFound)) {
-			// mod options enables traces and trace file is openned => we consider that the trace module
+			// mod options enables traces and trace file is opened => we consider that the trace module
 			// is properly initialized, then we set traceModuleCorrectlyInitialized to true
 			traceModuleCorrectlyInitialized = true;
 			startTime = std::time(NULL);
