@@ -112,6 +112,8 @@ CProgAndPlay::CProgAndPlay() : loaded(false), updated(false), missionEnded(false
 			// thread creation
 			std::string dirName = springTracesPath;
 			dirName.erase(dirName.end()-1);
+			// defining langage for the parser
+			TracesParser::setLang((modOpts.find("language") != modOpts.end()) ? modOpts.at("language") : "en");
 			tracesThread = boost::thread(&TracesParser::parseTraceFileOffline, &tp, dirName, missionName+".log");
 		}
 	}
