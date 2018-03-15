@@ -2,8 +2,16 @@
 #include "TraceConstantList.h"
 #include <cerrno>
 
-#define DEBUG
-#define LOG_IN_FILE
+/**
+  * Doit être mis à 1 pour prendre en compte les événements de Event::concatEventsArr rencontrés lors du parsage de fichier de traces brutes.
+  */
+#define INCLUDE_EVENTS 0
+
+
+/**
+  * Seuil utilisé pour stopper et éviter toute future recherche de répétitions d'un groupe de traces à partir d'une trace.
+  */
+#define MAX_END_SEARCH 5
 
 int TracesParser::lineNum = 0;
 int TracesParser::mission_end_time = 0;
@@ -11,32 +19,33 @@ int TracesParser::execution_start_time = 0;
 std::string TracesParser::lang = "";
 std::string TracesParser::mission_name = "";
 std::string TracesParser::params_json = "";
-Trace::sp_trace TracesParser::spe_eme;
 
-#ifdef DEBUG
+#ifdef DEBUG_PARSER
 	#ifdef LOG_IN_FILE
 		std::ofstream debugOfsParser("debugParser.log", std::ofstream::out);
-		std::ostream& osParser = debugOfsParser;
+		std::ostream& TracesParser::osParser = debugOfsParser;
 	#else
-		std::ostream& osParser = std::cout;
+		std::ostream& TracesParser::osParser = std::cout;
 	#endif
 #endif
 
-TracesParser::TracesParser(bool in_game): in_game(in_game), used(false), compressed(false), end(false), proceed(false), start(0) {}
-
-TracesParser::~TracesParser() {
-	endParse();
+TracesParser::TracesParser(): used(false), compressed(false), end(false), proceed(false), start(0) {
+	root = boost::make_shared<Sequence>(1, true);
 }
 
-bool TracesParser::beginParse(const std::string& dir_path, const std::string& filename) {
+TracesParser::~TracesParser() {
+	CloseResources();
+}
+
+bool TracesParser::InitResources(const std::string& dir_path, const std::string& filename) {
 	if (used) {
-		#ifdef DEBUG
+		#ifdef DEBUG_PARSER
 			osParser << "parsing of traces file already launched" << std::endl;
 		#endif
 		return false;
 	}
 	if (filename.find(".log") == std::string::npos) {
-		#ifdef DEBUG
+		#ifdef DEBUG_PARSER
 		 	osParser << "not a log file" << std::endl;
 		#endif
 		return false;
@@ -46,21 +55,21 @@ bool TracesParser::beginParse(const std::string& dir_path, const std::string& fi
 		ifs.close();
 	ifs.open(s.c_str(), std::ios::in | std::ios::binary);
 	if (ifs.good()) {
-		if (!traces.empty())
-			traces.clear();
+		if (root->size() != 0)
+			root->clear();
 		this->dir_path = dir_path;
 		this->filename = filename;
 		used = true;
 	}
 	else{
-		#ifdef DEBUG
+		#ifdef DEBUG_PARSER
 			osParser << "error opening file: " << strerror(errno) << std::endl;
 		#endif
 	}
 	return used;
 }
 
-void TracesParser::endParse() {
+void TracesParser::CloseResources() {
 	lineNum = 0;
 	start = 0;
 	used = false;
@@ -69,7 +78,7 @@ void TracesParser::endParse() {
 	proceed = false;
 	if (ifs.is_open())
 		ifs.close();
-	#ifdef DEBUG
+	#ifdef DEBUG_PARSER
 		#ifdef LOG_IN_FILE
 			if (debugOfsParser.is_open())
 				debugOfsParser.close();
@@ -77,168 +86,276 @@ void TracesParser::endParse() {
 	#endif
 }
 
-void TracesParser::writeFiles() {
-	#ifdef DEBUG
-		display(osParser);
+void TracesParser::saveCompression() {
+	#ifdef DEBUG_PARSER
+		exportTracesAsString(osParser);
 	#endif
+	// Export compression results as txt file
 	std::string s = "\\" + filename;
 	s.replace(s.find(".log"), 4, "_compressed.txt");
 	s.insert(0, dir_path);
 	std::ofstream ofs(s.c_str(), std::ofstream::out | std::ofstream::trunc);
 	if (ofs.good()) {
-		display(ofs);
+		exportTracesAsString(ofs);
 		ofs.close();
 	}
-	exportTraceToXml();
-	compressed = true;
-}
-
-/*
- * Starts the parsing of the traces file 'filename' which is located in 'dir_path' with offline algorithm (the file has to be already filled with the traces).
- *
- */
-void TracesParser::parseTraceFileOffline(const std::string& dir_path, const std::string& filename) {
-	if (beginParse(dir_path,filename)) {
-		if (in_game && reachLastStart())
-			readTracesOfflineInGame();
-		else {
-			readTracesOffline();
-			writeFiles();
+	// Export compression results as xml file
+	rapidxml::xml_document<> doc;
+	rapidxml::xml_node<>* dec = doc.allocate_node(rapidxml::node_declaration);
+	dec->append_attribute(doc.allocate_attribute("version", "1.0"));
+	dec->append_attribute(doc.allocate_attribute("encoding", "utf-8"));
+	doc.append_node(dec);
+	rapidxml::xml_node<>* root_node = doc.allocate_node(rapidxml::node_element, "trace");
+	doc.append_node(root_node);
+	std::stack<rapidxml::xml_node<> *> node_stack;
+	node_stack.push(root_node);
+	rapidxml::xml_node<> *node;
+	std::stack<Sequence::sp_sequence> seq_stack;
+	Sequence::sp_sequence sps;
+	Trace::sp_trace spt;
+	unsigned int i = 0;
+	bool pass = false;
+	while (i < root->size() || !seq_stack.empty()) {
+		if (!seq_stack.empty()) {
+			while (!seq_stack.empty() && sps->isEndReached()) {
+				seq_stack.pop();
+				node_stack.pop();
+				if (!seq_stack.empty())
+					sps = seq_stack.top();
+			}
+			if (!sps->isEndReached()) {
+				spt = sps->next();
+				pass = true;
+			}
 		}
-		endParse();
+		if (seq_stack.empty() && i < root->size()) {
+			spt = root->at(i++);
+			pass = true;
+		}
+		if (pass) {
+			pass = false;
+			if (spt->isEvent()) {
+				Event *e = dynamic_cast<Event*>(spt.get());
+				if (e->getLabel().compare(START_MISSION) == 0) {
+					while (node_stack.size() > 1)
+						node_stack.pop();
+					StartMissionEvent *sme = dynamic_cast<StartMissionEvent*>(e);
+					node = doc.allocate_node(rapidxml::node_element, "mission");
+					node->append_attribute(doc.allocate_attribute("name", doc.allocate_string(sme->getMissionName().c_str())));
+					node->append_attribute(doc.allocate_attribute("start_time", doc.allocate_string(boost::lexical_cast<std::string>(sme->getStartTime()).c_str())));
+					node_stack.top()->append_node(node);
+					node_stack.push(node);
+				}
+				else if (e->getLabel().compare(END_MISSION) == 0) {
+					EndMissionEvent *eme = dynamic_cast<EndMissionEvent*>(e);
+					if (node_stack.size() > 2)
+						node_stack.pop();
+					node_stack.top()->append_attribute(doc.allocate_attribute("end_time", doc.allocate_string(boost::lexical_cast<std::string>(eme->getEndTime()).c_str())));
+					node_stack.top()->append_attribute(doc.allocate_attribute("status", doc.allocate_string(eme->getStatus().c_str())));
+					node_stack.pop();
+				}
+				else if (e->getLabel().compare(NEW_EXECUTION) == 0) {
+					NewExecutionEvent *nee = dynamic_cast<NewExecutionEvent*>(e);
+					if (node_stack.size() > 2)
+						node_stack.pop();
+					node = doc.allocate_node(rapidxml::node_element, "execution");
+					node->append_attribute(doc.allocate_attribute("start_time", doc.allocate_string(boost::lexical_cast<std::string>(nee->getStartTime()).c_str())));
+					node->append_attribute(doc.allocate_attribute("programming_language_used", doc.allocate_string(nee->getProgrammingLangageUsed().c_str())));
+					node_stack.top()->append_node(node);
+					node_stack.push(node);
+				}
+				else if (e->getLabel().compare(END_EXECUTION) == 0) {
+					node_stack.top()->append_attribute(doc.allocate_attribute("end_time", doc.allocate_string(boost::lexical_cast<std::string>(dynamic_cast<EndExecutionEvent*>(e)->getEndTime()).c_str())));
+					node_stack.pop();
+				}
+				else {
+					node = doc.allocate_node(rapidxml::node_element, "event");
+					node->append_attribute(doc.allocate_attribute("label", doc.allocate_string(e->getLabel().c_str())));
+					if (!e->getInfo().empty())
+						node->append_attribute(doc.allocate_attribute("info", doc.allocate_string(e->getInfo().c_str())));
+					node_stack.top()->append_node(node);
+				}
+			}
+			else if (spt->isCall()) {
+				Call *c = dynamic_cast<Call*>(spt.get());
+				node = doc.allocate_node(rapidxml::node_element, "call");
+				node->append_attribute(doc.allocate_attribute("label", doc.allocate_string(c->getKey().c_str())));
+				if (c->getError() != Call::NONE)
+					node->append_attribute(doc.allocate_attribute("error", doc.allocate_string(Call::getEnumLabel<Call::ErrorType>(c->getError(),Call::errorsArr))));
+				s = c->getParams();
+				if (s.compare("") != 0)
+					node->append_attribute(doc.allocate_attribute("params", doc.allocate_string(s.c_str())));
+				s = c->getReturn();
+				if (s.compare("") != 0)
+					node->append_attribute(doc.allocate_attribute("return", doc.allocate_string(s.c_str())));
+				node->append_attribute(doc.allocate_attribute("info", doc.allocate_string(c->getInfo().c_str())));
+				node_stack.top()->append_node(node);
+			}
+			else {
+				sps = boost::dynamic_pointer_cast<Sequence>(spt);
+				sps->reset();
+				node = doc.allocate_node(rapidxml::node_element, "sequence");
+				node->append_attribute(doc.allocate_attribute("num_map", doc.allocate_string(Sequence::getIterartionDescriptionString(sps->getIterationDescription()).c_str())));
+				node->append_attribute(doc.allocate_attribute("info", doc.allocate_string(sps->getInfo().c_str())));
+				std::string nb_iteration_fixed = (sps->hasNumberIterationFixed()) ? "true" : "false";
+				node->append_attribute(doc.allocate_attribute("nb_iteration_fixed", doc.allocate_string(nb_iteration_fixed.c_str())));
+				node_stack.top()->append_node(node);
+				node_stack.push(node);
+				seq_stack.push(sps);
+			}
+		}
 	}
+	s = "\\" + filename;
+	s.replace(s.find(".log"), 4, "_compressed.xml");
+	s.insert(0, dir_path);
+	std::ofstream ofsXml(s.c_str(), std::ofstream::out | std::ofstream::trunc);
+	if (ofsXml.good()) {
+		ofsXml << doc;
+		ofsXml.close();
+	}
+	doc.clear();
 }
 
-/* A SUPPRIMER ???
-void TracesParser::parseTraceFile(const std::string& dir_path, const std::string& filename) {
-	if (beginParse(dir_path,filename)) {
+/**
+	* \brief Lancement de la compression d'un fichier de traces brutes avec l'algorithme de compression hors-ligne.
+	*
+	* \param dir_path le chemin d'accès au fichier.
+	* \param filename le nom du fichier.
+	*/
+void TracesParser::parseLogFile(const std::string& dir_path, const std::string& filename, bool waitEndFlag) {
+	// check if we can start parsing
+	if (InitResources(dir_path,filename)) {
+		#ifdef DEBUG_PARSER
+			osParser << "Start parsing traces" << std::endl;
+		#endif
 		std::string line;
-		Event *e = NULL;
-		while (std::getline(ifs, line)) {
-			lineNum++;
-			#ifdef DEBUG
-				osParser << "line : " << lineNum << std::endl;
-			#endif
-			Trace::sp_trace spt = handleLine(line);
-			if (spt) {
-				e = (spt->isEvent()) ? dynamic_cast<Event*>(spt.get()) : NULL;
-				if (e != NULL && Trace::inArray(e->getLabel().c_str(), Event::noConcatEventsArr) > -1) {
-					if (e->getLabel().compare(END_EXECUTION) == 0)
-						traces.push_back(spt);
-					if (spe_eme && e->getLabel().compare(NEW_EXECUTION) != 0) {
-						traces.push_back(spe_eme);
-						spe_eme.reset();
+		bool executionDetected = false;
+		#ifdef DEBUG_PARSER
+			osParser << "Loop until end is set" << std::endl;
+		#endif
+		end = false;
+		proceed = false;
+		while (!end) {
+			// If we don't have to wait the "end" flag we set it to true and the "proceed" also in order to compress and exit after reading all the file (no waiting new input)
+			if (!waitEndFlag){
+				end = true;
+				proceed = true;
+			}
+			// we pop all new line included into the input file stream
+			while (std::getline(ifs, line)) {
+				lineNum++;
+				// we build a trace from the current line
+				#ifdef DEBUG_PARSER
+					osParser << std::endl << "Parse line: " << line;
+				#endif
+				Trace::sp_trace spt = parseLine(line);
+				if (spt) {
+					#ifdef DEBUG_PARSER
+						osParser << "Check if this line is an event" << std::endl;
+					#endif
+					Event::sp_event spe;
+					if (spt->isEvent()){
+						#ifdef DEBUG_PARSER
+							osParser << "\tThis line is an event" << std::endl;
+						#endif
+						spe = boost::dynamic_pointer_cast<Event>(spt);
 					}
-					if (e->getLabel().compare(END_EXECUTION) != 0)
-						traces.push_back(spt);
+					// We check if this trace is an event that we can't aggregate
+					if (spe && Trace::inArray(spe->getLabel().c_str(), Event::noConcatEventsArr) > -1) {
+						#ifdef DEBUG_PARSER
+							osParser << "\tevent nature: "<< spe->getLabel().c_str() << std::endl;
+						#endif
+						// We add this event at the end of the trace
+						#ifdef DEBUG_PARSER
+							osParser << "\tadd event at the end of the trace" << std::endl;
+						#endif
+						root->addTrace(spe);
+						// If we detect a new execution
+						if (spe->getLabel().compare(NEW_EXECUTION) == 0){
+							// Check if a previous execution has been detected
+							if (executionDetected){
+								// We try to detect and compress sequences. This case appears when two executions are launched in a same mission without an end execution event
+								#ifdef DEBUG_PARSER
+									osParser << "\tNew Execution: We try to detect and compress sequences" << std::endl;
+								#endif
+								offlineCompression();
+								// And we define the top of the trace as the new starting point
+								#ifdef DEBUG_PARSER
+									osParser << "\tNew Execution: The top of the trace is now the new starting point" << std::endl;
+								#endif
+								start = root->size();
+							}
+							// we set execution flag
+							executionDetected = true;
+						} else if (spe->getLabel().compare(END_EXECUTION) == 0){ // If we detect an end execution
+							// We try to detect and compress sequences. Default case, if we receive an end execution event we have to compress last trace
+							#ifdef DEBUG_PARSER
+								osParser << "\tEnd Execution: We try to detect and compress sequences" << std::endl;
+							#endif
+							offlineCompression();
+							// And we define the top of the trace as the new starting point
+							#ifdef DEBUG_PARSER
+								osParser << "\tEnd Execution: The top of the trace is now the new starting point" << std::endl;
+							#endif
+							start = root->size();
+							// we reset execution flag
+							executionDetected = false;
+						}
+					}
+					else{
+						// The trace is agregable, so we try to do it
+						#ifdef DEBUG_PARSER
+							osParser << "Minimal inline compression" << std::endl;
+						#endif
+						inlineCompression(spt);
+						#ifdef DEBUG_PARSER
+							osParser << "After inline compression" << std::endl;
+							root->exportAsString(osParser);
+						#endif
+					}
 				}
-				else
-					traces.push_back(spt);
 			}
-		}
-	}
-	exportTraceToXml();
-	endParse();
-}*/
-
-/*
- * Handles all traces contained in the file with the offline algorithm.
- *
- */
-void TracesParser::readTracesOffline() {
-	std::string line;
-	while (std::getline(ifs, line)) {
-		lineNum++;
-		Trace::sp_trace spt = handleLine(line);
-		if (spt) {
-			Event::sp_event spe;
-			if (spt->isEvent())
-				spe = boost::dynamic_pointer_cast<Event>(spt);
-			if (spe && Trace::inArray(spe->getLabel().c_str(), Event::noConcatEventsArr) > -1) {
-				detectSequences();
-				if (spe->getLabel().compare(END_EXECUTION) == 0)
-					traces.push_back(spe);
-				if (spe_eme && spe->getLabel().compare(START_MISSION) == 0) {
-					traces.push_back(spe_eme);
-					spe_eme.reset();
+			// No more lines to read, check if it's due to end of file
+			// If yes, we can continue
+			// If no (means another error), then we stop to read input file
+			if (!ifs.eof()){
+				#ifdef DEBUG_PARSER
+					osParser << "error occurs => we stop to read traes" << std::endl;
+				#endif
+				end = true; // Stop to read input file
+			}
+			ifs.clear();
+			// check if we have to compress agregate traces. proceed means game engine asks to proceed compression
+			if (proceed) {
+				// check if new traces are becoming since previous start mission event
+				if (start < (int)root->size()){
+					// We try to detect and compress remaining traces
+					#ifdef DEBUG_PARSER
+						osParser << "\tWe try to detect and compress sequences" << std::endl;
+					#endif
+					offlineCompression();
 				}
-				if (spe->getLabel().compare(END_EXECUTION) != 0)
-					traces.push_back(spe);
-				start = traces.size();
-			}
-			else
-				handleTraceOffline(spt);
-		}
-	}
-	detectSequences();
-	if (spe_eme) {
-		traces.push_back(spe_eme);
-		spe_eme.reset();
-	}
-}
-
-void TracesParser::readTracesOfflineInGame() {
-	std::string line;
-	bool change = false;
-	while (!end) {
-		// we pop all new line included into the input file stream
-		while (std::getline(ifs, line)) {
-			lineNum++;
-			// we build a trace from the current line
-			Trace::sp_trace spt = handleLine(line);
-			if (spt) {
-				Event::sp_event spe;
-				if (spt->isEvent())
-					spe = boost::dynamic_pointer_cast<Event>(spt);
-				// We check if this trace is an event that we can't aggregate
-				if (spe && Trace::inArray(spe->getLabel().c_str(), Event::noConcatEventsArr) > -1) {
-					// We try to detect and compress sequence in previous traces
-					detectSequences();
-					// Then we add the new trace
-					traces.push_back(spe);
-					// And we define the top of the trace as the new starting point
-					start = traces.size();
-					// If we detect a new execution or a new mission we note the changement
-					if (spe->getLabel().compare(NEW_EXECUTION) == 0 || spe->getLabel().compare(START_MISSION) == 0)
-						change = true;
-				}
-				else
-					// The trace is agregable, so we try to do it
-					handleTraceOffline(spt);
-			}
-		}
-		// check if we have to compress agregate traces
-		if (change && proceed) {
-			// Check if an end mission event have been detected
-			if (spe_eme) {
-				// if so, we try to detect and compress sequences
-				detectSequences();
-				// then we add this end mission event
-				traces.push_back(spe_eme);
-				spe_eme.reset();
-				// And we define the top of the trace as the new starting point
-				start = traces.size();
-			}
-			// Get the last token of the traces
-			Event::sp_event spe;
-			if (traces.back()->isEvent())
-				spe = boost::dynamic_pointer_cast<Event>(traces.back());
-			// Check if this token is not an event or at least not a starting event (mission or execution)
-			if (!spe || (spe->getLabel().compare(START_MISSION) != 0 && spe->getLabel().compare(NEW_EXECUTION) != 0)) {
-				// if so, we try to detect and compress sequences
-				detectSequences();
-				writeFiles(); //inform ProgAndPlay.cpp the compression is done
-				change = false;
+				#ifdef DEBUG_PARSER
+					osParser << "\tWe save compression results in files" << std::endl;
+				#endif
+				saveCompression();
+				#ifdef DEBUG_PARSER
+					osParser << "\tWarn compression is done and can be used" << std::endl;
+				#endif
+				compressed = true; // inform ProgAndPlay.cpp the compression is done
+				#ifdef DEBUG_PARSER
+					osParser << "\treset flags" << std::endl;
+				#endif
+				// we reset flags
+				executionDetected = false;
 				proceed = false;
 			}
 		}
-		if (!ifs.eof())
-			end = true; // Ensure end of read was EOF.
-		ifs.clear();
+		CloseResources();
 	}
 }
 
-Trace::sp_trace TracesParser::handleLine(const std::string& s) {
+Trace::sp_trace TracesParser::parseLine(const std::string& s) {
 	Trace *t = NULL;
 	std::vector<std::string> tokens = splitLine(s);
 	// Gestion des évènements produits par le jeu
@@ -252,7 +369,7 @@ Trace::sp_trace TracesParser::handleLine(const std::string& s) {
 		TracesParser::mission_end_time = stoi(tokens[1]);
 	}
 	else if (tokens[0].compare(GAME_END) == 0) {
-		spe_eme = boost::make_shared<EndMissionEvent>(tokens[1], TracesParser::mission_end_time);
+		t = new EndMissionEvent(tokens[1], TracesParser::mission_end_time);
 	}
 	else {
 		int numTokens = tokens.size();
@@ -276,12 +393,12 @@ Trace::sp_trace TracesParser::handleLine(const std::string& s) {
 			t = new NewExecutionEvent(TracesParser::execution_start_time, tokens[ind+1]);
 			// Chargement des params en fonction du langage utilisé
 			if (TracesParser::params_json.compare("") != 0){
-				#ifdef DEBUG
+				#ifdef DEBUG_PARSER
 				 	osParser << "Params defined, use it to compress and analyse." << std::endl;
 				#endif
 				Call::callMaps.initMaps(TracesParser::params_json, tokens[ind+1], TracesParser::lang);
 			} else {
-				#ifdef DEBUG
+				#ifdef DEBUG_PARSER
 					osParser << "No params defined\nUsing default compression options." << std::endl;
 				#endif
 			}
@@ -430,341 +547,88 @@ Trace::sp_trace TracesParser::handleLine(const std::string& s) {
 	return spt;
 }
 
-void TracesParser::detectSequences() {
-	unsigned int i, j, seq_start, seq_end, max_length = 2;
-    bool found, climb = false;
-	Sequence::sp_sequence sps_up, sps_down, sps_res;
-	while(max_length <= Trace::getLength(traces,start) / 2) {
-		#ifdef DEBUG
-			osParser << "max size: " << max_length << std::endl;
-		#endif
-		i = start;
-		seq_end = start;
-		while (i < traces.size()) {
-			if (traces.at(i)->isEvent()) {
-				i++;
-				continue;
-			}
-			if (traces.at(i)->indSearch == -1) {
-				traces.at(i)->indSearch = i-1;
-				traces.at(i)->lenSearch = traces.at(i-1)->length();
-			}
-			#ifdef DEBUG
-				osParser << "search from: " << std::endl;
-				traces.at(i)->display(osParser);
-				osParser << std::endl;
-			#endif
-			while (i < traces.size() && traces.at(i)->lenSearch <= max_length && traces.at(i)->indSearch >= (int)seq_end && traces.at(i)->endSearch < MAX_END_SEARCH) {
-				if (traces.at(i)->lenSearch >= 2) {
-					sps_up = boost::make_shared<Sequence>(1);
-					seq_start = traces.at(i)->indSearch;
-					j = seq_start;
-					while(j < i)
-						sps_up->addTrace(traces.at(j++));
-					if (checkFeasibility(sps_up->length(),j)) {
-						#ifdef DEBUG
-							osParser << "sps_up: " << std::endl;
-							sps_up->display(osParser);
-							osParser << std::endl;
-						#endif
-						found = true;
-						while (found) {
-							sps_down = boost::make_shared<Sequence>(1);
-							while(j < traces.size() && sps_down->length() < sps_up->length())
-								sps_down->addTrace(traces.at(j++));
-							#ifdef DEBUG
-								osParser << "sps_down: " << std::endl;
-								sps_down->display(osParser);
-								osParser << std::endl;
-							#endif
-							sps_res = mergeSequences(sps_up, sps_down);
-							if (sps_res) {
-								sps_up = sps_res;
-								seq_end = j;
-							}
-							else
-								found = false;
-						}
-						if (sps_up->getNum() >= 2) {
-							#ifdef DEBUG
-								osParser << "seq_start: " << seq_start << std::endl;
-								osParser << "seq_end: " << seq_end << std::endl;
-							#endif
-							sps_up->checkDelayed();
-							traces.erase(traces.begin() + seq_start, traces.begin() + seq_end);
-							traces.insert(traces.begin() + seq_start, sps_up);
-							seq_end = seq_start + 1;
-							std::vector<Trace::sp_trace>::iterator it = traces.begin() + seq_end;
-							while(it != traces.end())
-								(*it++)->indSearch = -1;
-							i = seq_start + max_length;
-							// i = seq_start + max_length + 1
-							#ifdef DEBUG
-								osParser << "seq_end: " << seq_end << std::endl;
-								osParser << "i: " << i << std::endl;
-								it = traces.begin();
-								while (it != traces.end())
-									(*it++)->display(osParser);
-								osParser << std::endl;
-							#endif
-						}
-						else {
-							#ifdef DEBUG
-								osParser << "false sequence" << std::endl;
-							#endif
-							climb = true;
-						}
-					}
-					else {
-						#ifdef DEBUG
-							osParser << "not enough traces for sequence" << std::endl;
-						#endif
-						traces.at(i)->endSearch = MAX_END_SEARCH;
-						break;
-					}
-				}
-				else {
-					climb = true;
-				}
-				if (climb && traces.at(i)->indSearch > 0) {
-					traces.at(i)->indSearch--;
-					traces.at(i)->lenSearch += traces.at(traces.at(i)->indSearch)->length();
-					climb = false;
-				}
-			}
-			i++;
-		}
-		max_length++;
-	}
-}
-
-bool TracesParser::checkFeasibility(unsigned int min_length, unsigned int ind_start) {
-	unsigned int len = 0;
-	for (unsigned int i = ind_start; len < min_length && i < traces.size(); i++) {
-		if (traces.at(i)->isEvent() && Trace::inArray(boost::dynamic_pointer_cast<Event>(traces.at(i))->getLabel().c_str(), Event::noConcatEventsArr) > -1)
-			break;
-		len += traces.at(i)->length();
-	}
-	return len >= min_length;
-}
-
-/*
- * Constructs the most generalised sequence from seq_up and seq_down. seq_up and seq_down must have the same length and must be equals.
- *
- * Returns a shared_ptr object which contains a pointer to the new sequence if the construction has succeeded, or a NULL pointer otherwise.
- *
- */
-Sequence::sp_sequence TracesParser::mergeSequences(Sequence::sp_sequence sps_up, Sequence::sp_sequence sps_down) {
-	Sequence::sp_sequence sps;
-	if (sps_up->compare(sps_down.get())) {
-		#ifdef DEBUG
-			osParser << "starting merge" << std::endl;
-			sps_up->display(osParser);
-			sps_down->display(osParser);
-			osParser << std::endl;
-		#endif
-		// the two sequences are equals
-		sps_up->reset();
-		sps_down->reset();
-		unsigned int len_up, len_down, pop = 0;
-		bool next_up = false, next_down = false;
-		sps = boost::make_shared<Sequence>(sps_up);
-		sps->addOne();
-		std::stack<Sequence::sp_sequence> newStack;
-		newStack.push(sps);
-		std::stack<Sequence::sp_sequence> upStack;
-		upStack.push(sps_up);
-		std::stack<Sequence::sp_sequence> downStack;
-		downStack.push(sps_down);
-		std::vector<Trace::sp_trace> events;
-		Trace::sp_trace spt_up = sps_up->next();
-		while (!sps_up->isEndReached() && spt_up->isEvent()) {
-			events.push_back(spt_up);
-			spt_up = sps_up->next();
-		}
-		Trace::sp_trace spt_down = sps_down->next();
-		while (!sps_down->isEndReached() && spt_down->isEvent()) {
-			events.push_back(spt_down);
-			spt_down = sps_down->next();
-		}
-		while (!upStack.empty() && !downStack.empty()) {
-			if (!spt_up->isSequence() && !spt_down->isSequence()) {
-				#ifdef DEBUG
-					osParser << "both not sequence" << std::endl;
-				#endif
-				next_up = true;
-				next_down = true;
-				if (!events.empty()) {
-					for (unsigned int i = 0; i < events.size(); i++)
-						sps->addTrace(events.at(i));
-					events.clear();
-				}
-				sps->addTrace(spt_up);
-				dynamic_cast<Call*>(spt_up.get())->filterCall(dynamic_cast<const Call*>(spt_down.get()));
-			}
-			else {
-				if (spt_up->isSequence())
-					sps_up = boost::dynamic_pointer_cast<Sequence>(spt_up);
-				if (spt_down->isSequence())
-					sps_down = boost::dynamic_pointer_cast<Sequence>(spt_down);
-				len_up = spt_up->length();
-				len_down = spt_down->length();
-				if (spt_up->isSequence() && spt_down->isSequence() && len_up == len_down) {
-					#ifdef DEBUG
-						osParser << "both sequence and same length" << std::endl;
-					#endif
-					sps = boost::make_shared<Sequence>(sps_up,sps_down);
-					upStack.push(sps_up);
-					downStack.push(sps_down);
-					next_up = true;
-					next_down = true;
-				}
-				else if ((spt_up->isSequence() && !spt_down->isSequence()) || len_up > len_down) {
-					#ifdef DEBUG
-						osParser << "push up" << std::endl;
-					#endif
-					sps = boost::make_shared<Sequence>(sps_up);
-					if (spt_up->isSequence() && !spt_down->isSequence())
-						sps->updateNumMap(1,1);
-					upStack.push(sps_up);
-					next_up = true;
-				}
-				else if ((!spt_up->isSequence() && spt_down->isSequence()) || len_up < len_down) {
-					#ifdef DEBUG
-						osParser << "push down" << std::endl;
-					#endif
-					sps = boost::make_shared<Sequence>(sps_down);
-					if (!spt_up->isSequence() && spt_down->isSequence())
-						sps->updateNumMap(1,1);
-					downStack.push(sps_down);
-					next_down = true;
-				}
-				newStack.push(sps);
-			}
-			while (next_up && !upStack.empty() && sps_up->isEndReached()) {
-				#ifdef DEBUG
-					osParser << "pop up" << std::endl;
-				#endif
-				upStack.pop();
-				if (!upStack.empty()) {
-					sps_up = upStack.top();
-					pop++;
-				}
-			}
-			while (next_down && !downStack.empty() && sps_down->isEndReached()) {
-				#ifdef DEBUG
-					osParser << "pop down" << std::endl;
-				#endif
-				downStack.pop();
-				if (!downStack.empty()) {
-					sps_down = downStack.top();
-					pop++;
-				}
-			}
-			#ifdef DEBUG
-				osParser << "pop value: " << pop << std::endl;
-			#endif
-			while (pop > 0) {
-				if (sps->isShared()) {
-					pop -= 2;
-					#ifdef DEBUG
-						osParser << "pop_new (shared)" << std::endl;
-					#endif
-				}
-				else {
-					pop--;
-					#ifdef DEBUG
-						osParser << "pop_new" << std::endl;
-					#endif
-				}
-				newStack.pop();
-				newStack.top()->addTrace(sps);
-				sps->completeNumMap();
-				sps = newStack.top();
-			}
-			if (next_up && !upStack.empty()) {
-				spt_up = sps_up->next();
-				while (!sps_up->isEndReached() && spt_up->isEvent()) {
-					events.push_back(spt_up);
-					spt_up = sps_up->next();
-				}
-				next_up = false;
-			}
-			if (next_down && !downStack.empty()) {
-				spt_down = sps_down->next();
-				while (!sps_down->isEndReached() && spt_down->isEvent()) {
-					events.push_back(spt_down);
-					spt_down = sps_down->next();
-				}
-				next_down = false;
-			}
-			#ifdef DEBUG
-				osParser << "end" << std::endl;
-			#endif
-		}
-		#ifdef DEBUG
-			osParser << "merge result" << std::endl;
-			sps->display(osParser);
-			osParser << std::endl;
-		#endif
-	}
-	return sps;
-}
-
-void TracesParser::handleTraceOffline(Trace::sp_trace& spt) {
+void TracesParser::inlineCompression(Trace::sp_trace& spt) {
 	bool add = false;
-	if (traces.size() > 0) {
-		Sequence::sp_sequence sps;
-		if (traces.back()->isSequence()) {
-			sps = boost::dynamic_pointer_cast<Sequence>(traces.back());
-			if (sps->at(0)->operator==(spt.get())) {
-				sps->addOne();
-				add = true;
-			}
-			else if (spt->isEvent()) {
-				sps->addTrace(spt);
-				add = true;
-			}
-		}
-		else if (traces.back()->isCall() && traces.back()->operator==(spt.get())) {
-			sps = boost::make_shared<Sequence>(2);
-			sps->addTrace(traces.back());
-			dynamic_cast<Call*>(traces.back().get())->filterCall(dynamic_cast<const Call*>(spt.get()));
-			traces.pop_back();
-			traces.push_back(sps);
+	if (root->size() > 1) {
+		// Check if the last trace is an event
+		if (spt->isEvent()) {
+			// add this event (new trace) at the end of the traces
+			root->addTrace(spt);
 			add = true;
 		}
-	}
-	if (!add)
-		traces.push_back(spt);
-}
-
-bool TracesParser::reachLastStart() {
-	std::string line;
-	int pos = 0, start_pos = -1, cpt = 1;
-	while (getline(ifs, line)) {
-		std::vector<std::string> tokens = splitLine(line);
-		if (tokens[0].compare(GAME_START) == 0) {
-			start_pos = pos;
-			lineNum = cpt;
+		else{
+			// Get the last trace into this last sequence and look for the last Call
+			Sequence::sp_sequence parent_seq = root;
+			// Check if the last trace is a sequence
+			if (root->getTraces().back()->isSequence()) {
+				// While the last trace of this sequence is a sequence, we continue to progress inside
+				while (parent_seq->getTraces().back()->isSequence())
+					parent_seq = boost::dynamic_pointer_cast<Sequence>(parent_seq->getTraces().back());
+				// Now "parent_seq" don't finish by a sequence
+			}
+			// Check if the last trace of this sequence is equal to the new trace
+			Trace::sp_trace lastTrace = parent_seq->getTraces().back();
+			if (spt->isCall() && lastTrace->operator==(spt.get())) {
+				if (parent_seq->size() == 1){
+					// We include new trace in the sequence
+					parent_seq->addOne();
+				} else {
+					// We filter newCall with the previous one
+					Call::sp_call newCall = boost::dynamic_pointer_cast<Call>(spt);
+					newCall->filterCall(boost::dynamic_pointer_cast<Call>(lastTrace).get());
+					// We create a new sequence to store merge result
+					Sequence::sp_sequence new_seq = boost::make_shared<Sequence>(2);
+					// Add this new filtered trace into the new sequence
+					new_seq->addTrace(newCall);
+					// Remove the last trace of the parent sequence and we replace it by the new sequence
+					parent_seq->getTraces().pop_back();
+					parent_seq->addTrace(new_seq);
+				}
+				add = true;
+			}
 		}
-		pos = ifs.tellg();
-		cpt++;
 	}
-	ifs.clear();
-	if (start_pos != -1) {
-		ifs.seekg(start_pos);
-		//just at the begin of the last 'start' of the file (if there is at least one)
-		return true;
+	// If no direct compression occurs we add the new trace at the end of traces and we try a classic compression with a short window
+	if (!add){
+		root->addTrace(spt);
+		// on remonte jusqu'à un maximum de 3 fois la fenêtre maximale...
+		int limit = root->size() - MAX_END_SEARCH*3;
+		// ... ou si on atteindrait le début de la trace
+		if (limit < start) limit = start;
+		// try to compress succesive Calls
+		Sequence::findAndAggregateSuccessiveSequences(root, limit, true);
 	}
-	return false;
 }
 
-void TracesParser::display(std::ostream &os) {
+void TracesParser::offlineCompression() {
+	#ifdef DEBUG_PARSER
+		osParser << "\tWe try to aggregate successive sequences" << std::endl;
+	#endif
+	Sequence::findAndAggregateSuccessiveSequences(root, start);
+	#ifdef DEBUG_PARSER
+		root->exportAsString(osParser);
+	#endif
+/*	#ifdef DEBUG_PARSER
+		osParser << "\tWe try to rotate sequences due to if statements" << std::endl;
+	#endif
+	Sequence::findAndProcessRotatingSequences(root, start);
+	#ifdef DEBUG_PARSER
+		root->exportAsString(osParser);
+	#endif
+	#ifdef DEBUG_PARSER
+		osParser << "\tWe try merge inclusive sequences" << std::endl;
+	#endif
+	Sequence::findAndProcessInclusiveSequences(root, start);
+	#ifdef DEBUG_PARSER
+		root->exportAsString(osParser);
+	#endif*/
+}
+
+void TracesParser::exportTracesAsString(std::ostream &os) {
 	int num_start = 0;
 	Event *e = NULL;
-	for (unsigned int i = 0; i < traces.size(); i++) {
-		e = traces.at(i)->isEvent() ? dynamic_cast<Event*>(traces.at(i).get()) : NULL;
+	for (unsigned int i = 0; i < root->size(); i++) {
+		e = root->at(i)->isEvent() ? dynamic_cast<Event*>(root->at(i).get()) : NULL;
 		if (e != NULL && Trace::inArray(e->getLabel().c_str(), Event::noConcatEventsArr) > -1) {
 			if (e->getLabel().compare(START_MISSION) == 0) {
 				if (num_start++ > 0)
@@ -787,7 +651,7 @@ void TracesParser::display(std::ostream &os) {
 			}
 		}
 		else
-			traces.at(i)->display(os);
+			root->at(i)->exportAsString(os);
 	}
 	if (Trace::numTab > 0)
 		Trace::numTab = 0;
@@ -802,20 +666,20 @@ std::vector<Trace::sp_trace> TracesParser::importTraceFromXml(const std::string&
 		doc.parse<0>(&xml_content[0]);
 		rapidxml::xml_node<> *root_node = doc.first_node("trace");
 		if (root_node != 0) {
-			#ifdef DEBUG
+			#ifdef DEBUG_PARSER
 				os << "\nbegin import from XML file" << std::endl;
 			#endif
 			importTraceFromNode(root_node->first_node(),traces);
 			for (unsigned int i = 0; i < traces.size(); i++){
-				#ifdef DEBUG
+				#ifdef DEBUG_PARSER
 				 	os << i << " " << traces.at(i) << std::endl;
 				#endif
-				traces.at(i)->display(os);
+				traces.at(i)->exportAsString(os);
 			}
 		}
 	}
 	catch (const std::runtime_error& e) {
-		#ifdef DEBUG
+		#ifdef DEBUG_PARSER
 			os << e.what() << std::endl;
 		#endif
 	}
@@ -869,14 +733,11 @@ void TracesParser::importTraceFromNode(rapidxml::xml_node<> *node, std::vector<T
 				if (node->first_attribute("nb_iteration_fixed") != 0)
 					num_fixed = std::string(node->first_attribute("nb_iteration_fixed")->value()).compare("true") == 0;
 				sps = boost::make_shared<Sequence>(info,num_fixed);
-				// if (!seq_stack.empty()) {
-					// sps->setParent(seq_stack.top());
-				// }
 				if (node->first_attribute("num_map") != 0) {
 					std::vector<std::string> tokens = splitLine(node->first_attribute("num_map")->value());
 					for (unsigned int i = 0; i < tokens.size(); i++) {
 						int pos = tokens.at(i).find(":",0);
-						sps->updateNumMap(stoi(std::string(tokens.at(i).begin(),tokens.at(i).begin()+pos)),stoi(std::string(tokens.at(i).begin()+pos+1,tokens.at(i).end())));
+						sps->addIteration(stoi(std::string(tokens.at(i).begin(),tokens.at(i).begin()+pos)),stoi(std::string(tokens.at(i).begin()+pos+1,tokens.at(i).end())));
 					}
 				}
 				seq_stack.push(sps);
@@ -892,11 +753,9 @@ void TracesParser::importTraceFromNode(rapidxml::xml_node<> *node, std::vector<T
 					s += " " + std::string(node->first_attribute("params")->value());
 				if (node->first_attribute("return") != 0)
 					s += " - " + std::string(node->first_attribute("return")->value());
-				Trace::sp_trace spt = handleLine(s);
-				if (!seq_stack.empty()) {
+				Trace::sp_trace spt = parseLine(s);
+				if (!seq_stack.empty())
 					sps->addTrace(spt);
-					//spt->setParent(sps);
-				}
 				else
 					traces.push_back(spt);
 				if (node->first_attribute("info") != 0)
@@ -912,124 +771,6 @@ unsigned int TracesParser::getNodeChildCount(rapidxml::xml_node<> *node) {
 	for (rapidxml::xml_node<> *child = node->first_node(); child; child = child->next_sibling())
 		i++;
 	return i;
-}
-
-void TracesParser::exportTraceToXml() {
-	rapidxml::xml_document<> doc;
-	rapidxml::xml_node<>* dec = doc.allocate_node(rapidxml::node_declaration);
-	dec->append_attribute(doc.allocate_attribute("version", "1.0"));
-	dec->append_attribute(doc.allocate_attribute("encoding", "utf-8"));
-	doc.append_node(dec);
-	rapidxml::xml_node<>* root_node = doc.allocate_node(rapidxml::node_element, "trace");
-	doc.append_node(root_node);
-	std::stack<rapidxml::xml_node<> *> node_stack;
-	node_stack.push(root_node);
-	rapidxml::xml_node<> *node;
-	std::stack<Sequence::sp_sequence> seq_stack;
-	Sequence::sp_sequence sps;
-	Trace::sp_trace spt;
-	std::string s;
-	unsigned int i = 0;
-	bool pass = false;
-	while (i < traces.size() || !seq_stack.empty()) {
-		if (!seq_stack.empty()) {
-			while (!seq_stack.empty() && sps->isEndReached()) {
-				seq_stack.pop();
-				node_stack.pop();
-				if (!seq_stack.empty())
-					sps = seq_stack.top();
-			}
-			if (!sps->isEndReached()) {
-				spt = sps->next();
-				pass = true;
-			}
-		}
-		if (seq_stack.empty() && i < traces.size()) {
-			spt = traces.at(i++);
-			pass = true;
-		}
-		if (pass) {
-			pass = false;
-			if (spt->isEvent()) {
-				Event *e = dynamic_cast<Event*>(spt.get());
-				if (e->getLabel().compare(START_MISSION) == 0) {
-					while (node_stack.size() > 1)
-						node_stack.pop();
-					StartMissionEvent *sme = dynamic_cast<StartMissionEvent*>(e);
-					node = doc.allocate_node(rapidxml::node_element, "mission");
-					node->append_attribute(doc.allocate_attribute("name", doc.allocate_string(sme->getMissionName().c_str())));
-					node->append_attribute(doc.allocate_attribute("start_time", doc.allocate_string(boost::lexical_cast<std::string>(sme->getStartTime()).c_str())));
-					node_stack.top()->append_node(node);
-					node_stack.push(node);
-				}
-				else if (e->getLabel().compare(END_MISSION) == 0) {
-					EndMissionEvent *eme = dynamic_cast<EndMissionEvent*>(e);
-					if (node_stack.size() > 2)
-						node_stack.pop();
-					node_stack.top()->append_attribute(doc.allocate_attribute("end_time", doc.allocate_string(boost::lexical_cast<std::string>(eme->getEndTime()).c_str())));
-					node_stack.top()->append_attribute(doc.allocate_attribute("status", doc.allocate_string(eme->getStatus().c_str())));
-					node_stack.pop();
-				}
-				else if (e->getLabel().compare(NEW_EXECUTION) == 0) {
-					NewExecutionEvent *nee = dynamic_cast<NewExecutionEvent*>(e);
-					if (node_stack.size() > 2)
-						node_stack.pop();
-					node = doc.allocate_node(rapidxml::node_element, "execution");
-					node->append_attribute(doc.allocate_attribute("start_time", doc.allocate_string(boost::lexical_cast<std::string>(nee->getStartTime()).c_str())));
-					node->append_attribute(doc.allocate_attribute("programming_language_used", doc.allocate_string(nee->getProgrammingLangageUsed().c_str())));
-					node_stack.top()->append_node(node);
-					node_stack.push(node);
-				}
-				else if (e->getLabel().compare(END_EXECUTION) == 0) {
-					node_stack.top()->append_attribute(doc.allocate_attribute("end_time", doc.allocate_string(boost::lexical_cast<std::string>(dynamic_cast<EndExecutionEvent*>(e)->getEndTime()).c_str())));
-					node_stack.pop();
-				}
-				else {
-					node = doc.allocate_node(rapidxml::node_element, "event");
-					node->append_attribute(doc.allocate_attribute("label", doc.allocate_string(e->getLabel().c_str())));
-					if (!e->getInfo().empty())
-						node->append_attribute(doc.allocate_attribute("info", doc.allocate_string(e->getInfo().c_str())));
-					node_stack.top()->append_node(node);
-				}
-			}
-			else if (spt->isCall()) {
-				Call *c = dynamic_cast<Call*>(spt.get());
-				node = doc.allocate_node(rapidxml::node_element, "call");
-				node->append_attribute(doc.allocate_attribute("label", doc.allocate_string(c->getKey().c_str())));
-				if (c->getError() != Call::NONE)
-					node->append_attribute(doc.allocate_attribute("error", doc.allocate_string(Call::getEnumLabel<Call::ErrorType>(c->getError(),Call::errorsArr))));
-				s = c->getParams();
-				if (s.compare("") != 0)
-					node->append_attribute(doc.allocate_attribute("params", doc.allocate_string(s.c_str())));
-				s = c->getReturn();
-				if (s.compare("") != 0)
-					node->append_attribute(doc.allocate_attribute("return", doc.allocate_string(s.c_str())));
-				node->append_attribute(doc.allocate_attribute("info", doc.allocate_string(c->getInfo().c_str())));
-				node_stack.top()->append_node(node);
-			}
-			else {
-				sps = boost::dynamic_pointer_cast<Sequence>(spt);
-				sps->reset();
-				node = doc.allocate_node(rapidxml::node_element, "sequence");
-				node->append_attribute(doc.allocate_attribute("num_map", doc.allocate_string(Sequence::getNumMapString(sps->getNumMap()).c_str())));
-				node->append_attribute(doc.allocate_attribute("info", doc.allocate_string(sps->getInfo().c_str())));
-				std::string nb_iteration_fixed = (sps->hasNumberIterationFixed()) ? "true" : "false";
-				node->append_attribute(doc.allocate_attribute("nb_iteration_fixed", doc.allocate_string(nb_iteration_fixed.c_str())));
-				node_stack.top()->append_node(node);
-				node_stack.push(node);
-				seq_stack.push(sps);
-			}
-		}
-	}
-	s = "\\" + filename;
-	s.replace(s.find(".log"), 4, "_compressed.xml");
-	s.insert(0, dir_path);
-	std::ofstream ofsXml(s.c_str(), std::ofstream::out | std::ofstream::trunc);
-	if (ofsXml.good()) {
-		ofsXml << doc;
-		ofsXml.close();
-	}
-	doc.clear();
 }
 
 void TracesParser::setEnd() {
@@ -1080,7 +821,7 @@ int TracesParser::stoi(const std::string& s) {
 		res = boost::lexical_cast<int>(s);
 	}
 	catch(const boost::bad_lexical_cast &) {
-		#ifdef DEBUG
+		#ifdef DEBUG_PARSER
 		 	osParser << "error boost::lexical_cast<int>(" << s << ")" << std::endl;
 		#endif
 		exit(EXIT_FAILURE);
@@ -1096,7 +837,7 @@ float TracesParser::stof(const std::string& s) {
 		res = boost::lexical_cast<float>(s);
 	}
 	catch(const boost::bad_lexical_cast &) {
-		#ifdef DEBUG
+		#ifdef DEBUG_PARSER
 		 	osParser << "error boost::lexical_cast<float>" << std::endl;
 		#endif
 		exit(EXIT_FAILURE);

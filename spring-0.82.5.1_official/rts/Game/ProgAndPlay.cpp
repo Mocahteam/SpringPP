@@ -7,6 +7,8 @@
 #include <iostream>
 #include <map>
 #include <cmath>
+#include <cstdio>
+#include <cerrno>
 
 #include "StdAfx.h"
 #include "mmgr.h"
@@ -73,7 +75,7 @@ void log(std::string msg) {
 
 CProgAndPlay* pp;
 
-CProgAndPlay::CProgAndPlay() : loaded(false), updated(false), missionEnded(false), traceModuleCorrectlyInitialized(false), tp(true), ta(), tracesComing(false), newExecutionDetected(false), endExecutionDetected(false), onGoingCompression(false) {
+CProgAndPlay::CProgAndPlay() : loaded(false), updated(false), missionEnded(false), traceModuleCorrectlyInitialized(false), tp(), ta(), tracesComing(false), newExecutionDetected(false), endExecutionDetected(false), onGoingCompression(false) {
 	log("ProgAndPLay constructor begin");
 
 	// initialisation of Prog&Play
@@ -92,9 +94,7 @@ CProgAndPlay::CProgAndPlay() : loaded(false), updated(false), missionEnded(false
   const std::map<std::string,std::string>& modOpts = gameSetup->modOptions;
 
 	// init tracesOn depending on activetraces field in mod options
-	//bool tracesOn = modOpts.find("activetraces") != modOpts.end() && modOpts.at("activetraces").compare("1") == 0;
-	// For experimentation purpose we force engine to build feedback and compute score even if traces are not active
-	bool tracesOn=true;
+	bool tracesOn = modOpts.find("activetraces") != modOpts.end() && modOpts.at("activetraces").compare("1") == 0;
 
 	// Check if we are in testing mode
 	testMapMode = modOpts.find("testmap") != modOpts.end();
@@ -114,7 +114,9 @@ CProgAndPlay::CProgAndPlay() : loaded(false), updated(false), missionEnded(false
 			dirName.erase(dirName.end()-1);
 			// defining langage for the parser
 			TracesParser::setLang((modOpts.find("language") != modOpts.end()) ? modOpts.at("language") : "en");
-			tracesThread = boost::thread(&TracesParser::parseTraceFileOffline, &tp, dirName, missionName+".log");
+			// .log file is the input for the parser that will build compression version
+			// ppTraces is the output file stream that add content into .log file
+			tracesThread = boost::thread(&TracesParser::parseLogFile, &tp, dirName, missionName+".log", true);
 		}
 	}
 
@@ -136,14 +138,14 @@ CProgAndPlay::~CProgAndPlay() {
 			// Stop thread
 			tp.setEnd();
 			tracesThread.join();
+			// Close traces file
+			ppTraces.close();
 		}
-		// Close traces file
-		ppTraces.close();
 		// then the trace module is no longer initialized
 		traceModuleCorrectlyInitialized = false;
   }
-  logFile.close();
   log("ProgAndPLay destructor end");
+  logFile.close();
 }
 
 void CProgAndPlay::Update(void) {
@@ -299,6 +301,8 @@ void CProgAndPlay::Update(void) {
 				CLuaHandle::HandleLuaMsg(gu->myPlayerNum, LUA_HANDLE_ORDER_UI, 0, data); // processed by pp_meta_traces_manager.lua
 			} else {
 				log("testmap mode: no analysis required, only compression");
+				// Send empty feedback to Lua to display it on UI
+				sendFeedback("");
 				if (missionEnded) {
 					// generating an expert solution for a mission
 					// move traces and compressed traces files to directory 'traces\data\expert\missionName'
@@ -931,8 +935,36 @@ void CProgAndPlay::initTracesFile() {
 		// create a log file to store traces for this mission
 		std::stringstream ss;
 		ss << springTracesPath << missionName << ".log";
-		ppTraces.open(ss.str().c_str(), std::ios::out | std::ios::app | std::ios::ate);
-		if (ppTraces.is_open() && (testMapMode || defaultFeedbacksFound)) {
+		// check if this file already exists
+		std::ifstream f_test(ss.str().c_str());
+		if (f_test.is_open()){
+			f_test.close();
+			// find a new back name to rename previous trace
+			bool found = false;
+			int cpt = 1;
+			while (!found){
+				// build a new back name (format: path/fileName.logX where X is a number)
+				std::string backName = ss.str()+boost::lexical_cast<std::string>(cpt);
+				// check if this back name already exists
+				std::ifstream backFile(backName.c_str());
+				if (backFile.is_open()){
+					// this file already exists we test the next
+					cpt++;
+					backFile.close();
+				} else {
+					// This file doesn't exist, we use this name to rename the current log file
+					found = true;
+					if (rename (ss.str().c_str(), backName.c_str()) == 0)
+						log("compressed traces successfully renamed");
+					else{
+						log("compressed traces rename operation failed");
+					}
+				}
+			}
+		}
+		// We erase current log file
+		ppTraces.open(ss.str().c_str(), std::ios::out);
+		if (ppTraces.good() && (testMapMode || defaultFeedbacksFound)) {
 			// mod options enables traces and trace file is opened => we consider that the trace module
 			// is properly initialized, then we set traceModuleCorrectlyInitialized to true
 			traceModuleCorrectlyInitialized = true;

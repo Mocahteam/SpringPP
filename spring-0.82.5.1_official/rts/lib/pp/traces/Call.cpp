@@ -80,7 +80,7 @@ std::vector<std::string> Call::getListIdWrongParams(Call *c) const {
 	return ids;
 }
 
-void Call::display(std::ostream &os) const {
+void Call::exportAsString(std::ostream &os) const {
 	for (int i = 0; i <= numTab; i++)
 		os << "\t";
 	if (delayed)
@@ -96,6 +96,10 @@ void Call::display(std::ostream &os) const {
 	if (ind_ret > 0 || ind_ret == -1)
 		os << " - " << s;
 	os << std::endl;
+}
+
+void Call::exportAsCompressedString(std::ostream &os) const {
+	os << key << " " << std::flush;
 }
 
 unsigned int Call::length() const {

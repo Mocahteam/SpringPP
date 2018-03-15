@@ -38,6 +38,7 @@
 #include "Game/Game.h"
 // Muratet ---
 #include "Game/GameServer.h"
+#include "Game/ProgAndPlay.h"
 // ---
 #include "Game/SelectedUnits.h"
 #include "Game/PlayerHandler.h"
@@ -1644,6 +1645,7 @@ int LuaUnsyncedCtrl::Restart(lua_State* L)
 	ISound::Shutdown();
 	// Muratet (else UDP is not closed when using execlp) ---
 	delete gameServer;
+	delete pp;
 	// ---
 #endif
 
