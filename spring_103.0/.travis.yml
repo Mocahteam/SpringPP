@@ -1,0 +1,39 @@
+os:
+  - linux
+#  - osx
+
+sudo: required
+dist: trusty
+
+language: cpp
+compiler:
+  - gcc
+  - clang
+env:
+  global:
+    - SPRING_DATADIR=~/build/spring/spring
+  matrix:
+    - TARGET="AAI CppTestAI E323AI HughAI KAIK NullAI NullJavaAI NullOOJavaAI RAI Shard"
+    - TARGET="engine-headless tests check"
+
+matrix:
+  fast_finish: true
+
+before_install:
+  - tools/scripts/travis_before_install.sh
+
+install:
+  - tools/scripts/travis_install.sh
+
+before_script:
+  - tools/scripts/travis_before_script.sh
+
+script:
+  - make -k $TARGET
+
+notifications:
+  irc:
+    channels:
+      - chat.freenode.net#taspring
+    on_success: change
+    on_failure: change

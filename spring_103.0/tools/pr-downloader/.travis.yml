@@ -1,0 +1,19 @@
+language: cpp
+compiler:
+  - clang
+  - gcc
+
+sudo: required
+dist: trusty
+
+install:
+  - sudo apt-get install -y gcc-4.7 g++-4.7 cmake libcurl4-openssl-dev libjsoncpp-dev
+
+before_script:
+  - cmake . -DPRD_DEVELOP_FILES:BOOL=ON
+
+script:
+  - make -j2
+  - sudo make install
+  - src/pr-downloader ba:stable
+  - src/pr-downloader --rapid-validate

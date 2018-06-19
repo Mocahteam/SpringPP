@@ -1,0 +1,35 @@
+*\.orig
+*~
+\.pc*
+\.*swp
+obj-*
+cmake_install.cmake
+CTestTestfile.cmake
+/debian/*\.log
+/html
+build/
+/curl*
+/zlib*
+/mingwlibs
+/dist
+# output
+/src/libspringdownloader.pc
+/src/pr-downloader
+*.a
+*.so
+
+# CMake
+Makefile
+CMakeCache.txt
+CMakeFiles
+
+#codeblocks project file
+/pr-downloader.cbp
+
+#ninja
+/.ninja_deps
+/.ninja_log
+/build.ninja
+/rules.ninja
+#test files
+test/prd_test
