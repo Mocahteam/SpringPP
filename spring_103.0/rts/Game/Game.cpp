@@ -16,6 +16,9 @@
 #include "GameSetup.h"
 #include "GlobalUnsynced.h"
 #include "LoadScreen.h"
+// Muratet (add Prog&Play #include) ---
+#include "ProgAndPlay.h"
+// ---
 #include "SelectedUnitsHandler.h"
 #include "WaitCommandsAI.h"
 #include "WordCompletion.h"
@@ -333,6 +336,9 @@ CGame::~CGame()
 	LOG("[%s][2]", __FUNCTION__);
 	SafeDelete(saveFile); // ILoadSaveHandler, depends on vfsHandler via ~IArchive
 	SafeDelete(jobDispatcher);
+	// Muratet (SafeDelete Prog&Play) ---
+	SafeDelete(pp);
+	// ---
 
 	LOG("[%s][3]", __FUNCTION__);
 	CWordCompletion::DestroyInstance();
@@ -505,6 +511,10 @@ void CGame::PostLoadSimulation()
 	loadscreen->SetLoadMessage("Loading Unit Definitions");
 	unitDefHandler = new CUnitDefHandler(defsParser);
 	featureDefHandler = new CFeatureDefHandler(defsParser);
+	// Muratet (instanciate Prog&Play) ---
+	loadscreen->SetLoadMessage("Loading Prog&Play");
+	pp = new CProgAndPlay();
+	// ---
 
 	CUnit::InitStatic();
 	CCommandAI::InitCommandDescriptionCache();
@@ -996,7 +1006,12 @@ bool CGame::UpdateUnsynced(const spring_time currentTime)
 		// update game timings
 		gu->gameTime += modGameDeltaTimeSecs;
 		gu->modGameTime += (modGameDeltaTimeSecs * gs->speedFactor * (1 - gs->paused));
-
+		// Muratet ---
+		gu->PP_modGameTime += modGameDeltaTimeSecs * gs->speedFactor;
+		pp->UpdateTimestamp();
+		// ---
+		
+		
 		if (playing && !gameOver) {
 			totalGameTime += modGameDeltaTimeSecs;
 		}
@@ -1414,6 +1429,10 @@ void CGame::StartPlaying()
 	}
 
 	eventHandler.GameStart();
+	
+	// Muratet (Prog&Play)
+	pp->TracePlayer();
+	//
 }
 
 
@@ -1473,6 +1492,9 @@ void CGame::SimFrame() {
 		// should probably be split from drawer
 		unitDrawer->UpdateGhostedBuildings();
 		interceptHandler.Update(false);
+		// Muratet (Prog&Play update) ---
+		pp->Update();
+		// ---
 
 		teamHandler->GameFrame(gs->frameNum);
 		playerHandler->GameFrame(gs->frameNum);
@@ -1512,7 +1534,14 @@ void CGame::GameEnd(const std::vector<unsigned char>& winningAllyTeams, bool tim
 	gameOver = true;
 	eventHandler.GameOver(winningAllyTeams);
 
-	CEndGameBox::Create(winningAllyTeams);
+	// Muratet (We display end game box only if gameMode is not opened) ---
+	const std::map<std::string, std::string>& modOpts = CGameSetup::GetModOptions();
+	if  (modOpts.find("gamemode") != modOpts.end() && modOpts.at("gamemode").compare("3") == 0){
+		CEndGameBox::Create(winningAllyTeams);
+	}
+	//CEndGameBox::Create(winningAllyTeams);
+	// ---
+	
 #ifdef    HEADLESS
 	profiler.PrintProfilingInfo();
 #endif // HEADLESS
@@ -1706,6 +1735,9 @@ void CGame::EndSkip() {
 
 	gu->gameTime    += skipSeconds;
 	gu->modGameTime += skipSeconds;
+	// Muratet
+	gu->PP_modGameTime += skipSeconds;
+	//
 
 	gs->speedFactor     = skipOldSpeed;
 	gs->wantedSpeedFactor = skipOldUserSpeed;

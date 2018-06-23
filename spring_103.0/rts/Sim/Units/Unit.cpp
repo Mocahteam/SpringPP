@@ -22,6 +22,9 @@
 #include "Game/GameHelper.h"
 #include "Game/GameSetup.h"
 #include "Game/GlobalUnsynced.h"
+// Muratet (add Prog&Play #include) ---
+#include "Game/ProgAndPlay.h"
+// ---
 #include "Game/SelectedUnitsHandler.h"
 #include "Game/Players/Player.h"
 #include "Map/Ground.h"
@@ -1160,6 +1163,9 @@ void CUnit::SlowUpdate()
 
 	CalculateTerrainType();
 	UpdateTerrainType();
+	// Muratet (call P&P UpdateUnit)
+	pp->UpdateUnit(this);
+	// ---
 }
 
 
@@ -1573,6 +1579,11 @@ bool CUnit::ChangeTeam(int newteam, ChangeType type)
 	// reset states and clear the queues
 	if (!teamHandler->AlliedTeams(oldteam, newteam))
 		ChangeTeamReset();
+
+	// Muratet (Change unit coalition) ---
+	pp->RemoveUnit(this);
+	pp->AddUnit(this);
+	// ---
 
 	return true;
 }

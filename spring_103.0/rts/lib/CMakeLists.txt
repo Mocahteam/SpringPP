@@ -5,6 +5,9 @@ ADD_SUBDIRECTORY(lua)
 ADD_SUBDIRECTORY(luasocket)
 ADD_SUBDIRECTORY(7z)
 ADD_SUBDIRECTORY(minizip)
+# Muratet (Add pp lib) ---
+ADD_SUBDIRECTORY(pp)
+# ---
 ADD_SUBDIRECTORY(streflop)
 ADD_SUBDIRECTORY(headlessStubs)
 

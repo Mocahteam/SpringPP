@@ -79,6 +79,9 @@ void CGlobalUnsynced::ResetState()
 	avgFrameTime = 0.001f;
 
 	modGameTime = 0;
+	// Muratet (include paused time) ---
+	PP_modGameTime = 0;
+	// ---
 	gameTime = 0;
 	startTime = 0;
 

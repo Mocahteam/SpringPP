@@ -18,6 +18,9 @@
 #include "Game/InMapDraw.h"
 #include "Game/Players/Player.h"
 #include "Game/Players/PlayerHandler.h"
+// Muratet (add Prog&Play #include) ---
+#include "Game/ProgAndPlay.h"
+// ---
 #include "Game/UI/GameSetupDrawer.h"
 #include "Game/UI/MouseHandler.h"
 #include "Lua/LuaHandle.h"
@@ -313,6 +316,9 @@ void CGame::ClientReadNet()
 					break;
 				}
 				gs->paused = !!inbuf[2];
+				// Muratet (notify pause to Prog&Play)
+				pp->GamePaused(gs->paused);
+				//
 				LOG("%s %s the game",
 						playerHandler->Player(player)->name.c_str(),
 						(gs->paused ? "paused" : "unpaused"));

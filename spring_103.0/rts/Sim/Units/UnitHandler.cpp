@@ -6,6 +6,9 @@
 #include "Unit.h"
 #include "UnitDefHandler.h"
 #include "CommandAI/BuilderCAI.h"
+// Muratet (add Prog&Play #include) ---
+#include "Game/ProgAndPlay.h"
+// ---
 #include "Sim/Misc/GlobalSynced.h"
 #include "Sim/Misc/TeamHandler.h"
 #include "Sim/MoveTypes/MoveType.h"
@@ -122,6 +125,9 @@ bool CUnitHandler::AddUnit(CUnit* unit)
 	VectorInsertUnique(unitsByDefs[unit->team][unit->unitDef->id], unit, false);
 
 	maxUnitRadius = std::max(unit->radius, maxUnitRadius);
+	// Muratet (call P&P addUnit) ---
+	pp->AddUnit(unit);
+	// ---
 	return true;
 }
 
@@ -158,6 +164,10 @@ void CUnitHandler::DeleteUnitNow(CUnit* delUnit)
 		if (activeSlowUpdateUnit > std::distance(activeUnits.begin(), it)) {
 			--activeSlowUpdateUnit;
 		}
+
+		// Muratet (call P&P removeUnit) ---
+		pp->RemoveUnit(delUnit);
+		// ---
 
 		activeUnits.erase(it);
 		VectorErase(unitsByDefs[delTeam][delType], delUnit);
@@ -255,7 +265,11 @@ void CUnitHandler::Update()
 		SCOPED_TIMER("Unit::SlowUpdate");
 		assert(activeSlowUpdateUnit >= 0);
 		// reset the iterator every <UNIT_SLOWUPDATE_RATE> frames
-		if ((gs->frameNum % UNIT_SLOWUPDATE_RATE) == 0) {
+		// Muratet (Call a SlowUpdate on second frame) ---
+		//if ((gs->frameNum % UNIT_SLOWUPDATE_RATE) == 0)
+		if ((gs->frameNum % UNIT_SLOWUPDATE_RATE) == 0 || gs->frameNum == 2)
+		// ---
+		{
 			activeSlowUpdateUnit = 0;
 		}
 
