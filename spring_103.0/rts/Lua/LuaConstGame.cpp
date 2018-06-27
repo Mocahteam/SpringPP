@@ -59,6 +59,9 @@ bool LuaConstGame::PushEntries(lua_State* L)
 
 	LuaPushNamedNumber(L, "startPosType",  gameSetup->startPosType);
 	LuaPushNamedBool(L,   "ghostedBuildings", gameSetup->ghostedBuildings);
+	// Muratet (Bontemps) (Add a constant to know if prog&play is enabled) ---
+	LuaPushNamedBool(L,   "isPPEnabled", true);
+	// ---
 
 	LuaPushNamedNumber(L, "gravity",             -mapInfo->map.gravity * GAME_SPEED * GAME_SPEED);
 	LuaPushNamedNumber(L, "windMin",             wind.GetMinWind());

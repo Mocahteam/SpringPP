@@ -79,6 +79,11 @@
 
 #include <boost/cstdint.hpp>
 
+// Muratet ---
+#include "Game/ProgAndPlay.h"
+#include "lib/pp/traces/Call.h" // in order to access Call::units_id_map, Call::orders_map and Call::resources_map
+// ---
+
 #if !defined(HEADLESS) && !defined(NO_SOUND)
 #include "System/Sound/OpenAL/EFX.h"
 #include "System/Sound/OpenAL/EFXPresets.h"
@@ -203,6 +208,9 @@ bool LuaUnsyncedCtrl::PushEntries(lua_State* L)
 	REGISTER_LUA_CFUNC(SendLuaUIMsg);
 	REGISTER_LUA_CFUNC(SendLuaGaiaMsg);
 	REGISTER_LUA_CFUNC(SendLuaRulesMsg);
+	// Muratet ---
+	REGISTER_LUA_CFUNC(SendModConstants);
+	// ---
 
 	REGISTER_LUA_CFUNC(LoadCmdColorsConfig);
 	REGISTER_LUA_CFUNC(LoadCtrlPanelConfig);
@@ -2167,6 +2175,9 @@ static int ReloadOrRestart(const std::string& springArgs, const std::string& scr
 			#endif
 			// close local socket to avoid "bind: Address already in use"
 			SafeDelete(gameServer);
+			// Muratet (close properly Prog&Play)---			
+			SafeDelete(pp);
+			// ---
 		}
 
 		LOG("[%s] Spring \"%s\" should be restarting", __FUNCTION__, springFullName.c_str());
@@ -2637,6 +2648,59 @@ int LuaUnsyncedCtrl::SendLuaRulesMsg(lua_State* L)
 	}
 	return 0;
 }
+
+// Muratet ---
+int LuaUnsyncedCtrl::SendModConstants(lua_State* L)
+{
+
+	if (!CLuaHandle::CheckModUICtrl(L)) {
+		return 0;
+	}
+
+	if (!lua_istable(L, 1)) {
+		luaL_error(L, "%s(): error first parameter is not a table", __FUNCTION__);
+	}
+	if (!lua_istable(L, 2)) {
+		luaL_error(L, "%s(): error second parameter is not a table", __FUNCTION__);
+	}
+
+	// Reset all maps
+	Call::orders_map.clear();
+	Call::units_id_map.clear();
+	Call::resources_map.clear();
+
+	// parse commands list
+	for (lua_pushnil(L); lua_next(L, 1) != 0; lua_pop(L, 1)) {
+		if (!lua_israwstring(L, -1) || !lua_isnumber(L, -2)){
+			luaL_error(L, "Incorrect arguments to %s. Commands list has to be table { [number]=string, ...}", __FUNCTION__);
+			return 0;
+		} else {
+			const string cmdName = lua_tostring(L, -1);
+			const int cmdCode = lua_toint(L, -2);
+			Call::orders_map.insert(std::pair<int,std::string>(cmdCode,cmdName));
+		}
+	}
+
+	// parse units type list
+	for (lua_pushnil(L); lua_next(L, 2) != 0; lua_pop(L, 1)) {
+		if (!lua_israwstring(L, -1) || !lua_israwnumber(L, -2)){
+			luaL_error(L, "Incorrect arguments to %s. UnitsType list has to be table { [number]=string, ...}", __FUNCTION__);
+			return 0;
+		} else {
+			const string unitTypeName = lua_tostring(L, -1);
+			const int unitTypeCode = lua_toint(L, -2);
+			Call::units_id_map.insert(std::pair<int,std::string>(unitTypeCode,unitTypeName));
+		}
+	}
+
+	// set default resources map
+	Call::resources_map.insert(std::pair<int,std::string>(0,"METAL"));
+	Call::resources_map.insert(std::pair<int,std::string>(1,"ENERGY"));
+
+	return 0;
+
+}
+// ---
 
 
 /******************************************************************************/

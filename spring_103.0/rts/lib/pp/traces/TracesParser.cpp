@@ -224,10 +224,10 @@ void TracesParser::saveCompression() {
 	*/
 void TracesParser::parseLogFile(const std::string& dir_path, const std::string& filename, bool waitEndFlag) {
 	// check if we can start parsing
+	#ifdef DEBUG_PARSER
+		osParser << "Start parsing traces" << std::endl;
+	#endif
 	if (InitResources(dir_path,filename)) {
-		#ifdef DEBUG_PARSER
-			osParser << "Start parsing traces" << std::endl;
-		#endif
 		std::string line;
 		bool executionDetected = false;
 		#ifdef DEBUG_PARSER
@@ -353,6 +353,9 @@ void TracesParser::parseLogFile(const std::string& dir_path, const std::string& 
 		}
 		CloseResources();
 	}
+	#ifdef DEBUG_PARSER
+		osParser << "End parsing traces" << std::endl;
+	#endif
 }
 
 Trace::sp_trace TracesParser::parseLine(const std::string& s) {

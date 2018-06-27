@@ -21,6 +21,15 @@
 #include "System/Util.h"
 #include "../tools/pr-downloader/src/pr-downloader.h"
 
+// Muratet (required includes)---
+#include "lib/minizip/zip.h"
+#include "lib/minizip/unzip.h"
+#include "System/FileSystem/DataDirsAccess.h"
+#include <boost/algorithm/string.hpp>
+#include <fstream>
+#include <streambuf>
+// ---
+
 using std::min;
 
 
@@ -56,6 +65,8 @@ bool LuaVFS::PushCommon(lua_State* L)
 
 	HSTR_PUSH_CFUNC(L, "ZlibDecompress", ZlibDecompress);
 	HSTR_PUSH_CFUNC(L, "CalculateHash",        CalculateHash);
+	HSTR_PUSH_CFUNC(L, "BuildPPEditor", BuildPPEditor);
+	HSTR_PUSH_CFUNC(L, "BuildPPGame", BuildPPGame);
 
 	return true;
 }
@@ -555,6 +566,251 @@ int LuaVFS::CalculateHash(lua_State* L)
 	free(hash);
 	return 1;
 }
+
+// Muratet ---
+/******************************************************************************/
+/******************************************************************************/
+//
+//  Build PP functions
+//
+
+int LuaVFS::BuildPPEditor(lua_State* L) {
+	// Get LUA args
+	const string game = luaL_checkstring(L, 1);
+
+	// Prepare file
+	const string modinfo = "return { game='SPRED for " + game + "', shortGame='SPRED for " + game + "', name='SPRED for " + game + "', shortName='SPRED for " + game + "', mutator='official', version='1.0', description='SPRED module. SPRED for " + game + ".', url='http://progandplay.lip6.fr/index.php?LANG=en', modtype=1, depend= { \"" + game + "\" },}";
+	const string editorName = dataDirsAccess.LocateFile("games/SPRED for " + game + ".sdz");
+
+	// Locate launcher zip
+	const string launcherPath = dataDirsAccess.LocateFile("games/SPRED_Launcher.sdz");
+
+	// Open launcher zip
+	unzFile launcherZip = unzOpen(launcherPath.c_str());
+	if (launcherZip == NULL) { luaL_error(L, "Couldn't load SPRED_Launcher.sdz"); return 0; }
+
+	// Open editor zip file
+	if (UNZ_OK != unzLocateFile(launcherZip, "editor.sdz", 2)) { luaL_error(L, "Couldn't find editor.sdz"); return 0; }
+	if (UNZ_OK != unzOpenCurrentFile(launcherZip)) { luaL_error(L, "Couldn't open editor.sdz"); return 0; }
+
+	// Extract editor zip
+	const int sizeBuffer = 32768;
+	char* buffer = new char[sizeBuffer];
+	::memset(buffer, 0, sizeBuffer);
+	std::ofstream outfile(editorName.c_str(), std::ofstream::binary);
+	while(unzReadCurrentFile(launcherZip, buffer, sizeBuffer) > 0) {
+		outfile.write(buffer, sizeBuffer);
+	}
+	if (buffer) {
+		delete[] buffer;
+		buffer = NULL;
+	}
+
+	// Close editor zip file
+	unzCloseCurrentFile(launcherZip);
+
+	// Close launcher zip
+	unzClose(launcherZip);
+
+	// Initialize file information (to prevent bugs)
+	zip_fileinfo* zipfi = new zip_fileinfo();
+	zipfi->dosDate = 0;
+	zipfi->tmz_date.tm_year = 2016;
+	zipfi->tmz_date.tm_mon = 5;
+	zipfi->tmz_date.tm_mday = 30;
+	zipfi->tmz_date.tm_hour = 10;
+	zipfi->tmz_date.tm_min = 30;
+	zipfi->tmz_date.tm_sec = 24;
+
+	// Locate editor zip
+	const string editorPath = dataDirsAccess.LocateFile(editorName.c_str());
+
+	// Open editor zip
+	zipFile editorZip = zipOpen(editorPath.c_str(), APPEND_STATUS_ADDINZIP); // Warning : if the zip file is empty, returns NULL
+	if (editorZip == NULL) { luaL_error(L, "Couldn't load extracted archive"); return 0; }
+
+	// Write file
+	zipOpenNewFileInZip(editorZip, "ModInfo.lua", zipfi, NULL, 0, NULL, 0, NULL, Z_DEFLATED, Z_BEST_COMPRESSION);
+	zipWriteInFileInZip(editorZip, modinfo.c_str(), modinfo.length());
+	zipCloseFileInZip(editorZip);
+
+	// Close editor zip
+	zipClose(editorZip, NULL);
+
+	return 0;
+}
+
+int LuaVFS::BuildPPGame(lua_State* L) {
+	// Get LUA args
+	const string editorName = luaL_checkstring(L, 1);
+	const string name = luaL_checkstring(L, 2);
+	const string desc = luaL_checkstring(L, 3);
+	const string scenarioFileName = luaL_checkstring(L, 4);
+	const string gameName = luaL_checkstring(L, 5);
+	const string game = luaL_checkstring(L, 6);
+	vector<string> levelList;
+	for (lua_pushnil(L) ; lua_next(L, 7) != 0 ; lua_pop(L, 1)) {
+		levelList.push_back(luaL_checkstring(L, -1));
+	}
+	vector<string> tracesList;
+	for (lua_pushnil(L) ; lua_next(L, 8) != 0 ; lua_pop(L, 1)) {
+		tracesList.push_back(luaL_checkstring(L, -1));
+	}
+	const string modtype = luaL_checkstring(L, 9);
+
+	// Prepare file
+	const string modinfo = "return { game='" + name + "', shortGame='" + gameName + "', name='" + name + "', shortName='" + gameName + "', mutator='official', version='1.0', description='SPRED module. " + desc + "', url='http://progandplay.lip6.fr/index.php?LANG=en', modtype=" + modtype + ", depend= { \"" + game + "\" },}";
+	const string gameFileName = dataDirsAccess.LocateFile("games/" + gameName + ".sdz");
+
+	// Locate editor zip
+	const string editorPath = dataDirsAccess.LocateFile("games/" + editorName + ".sdz");
+
+	// Open editor zip
+	unzFile editorZip = unzOpen(editorPath.c_str());
+	if (editorZip == NULL) {
+		std::string msg = "Couldn't load \"" + editorName + ".sdz\"";
+		luaL_error(L, msg.c_str());
+		return 0;
+	}
+
+	// Open game zip file
+	if (UNZ_OK != unzLocateFile(editorZip, "game.sdz", 2)) { luaL_error(L, "Couldn't find game.sdz"); return 0; }
+	if (UNZ_OK != unzOpenCurrentFile(editorZip)) { luaL_error(L, "Couldn't open game.sdz"); return 0; }
+
+	// Extract game zip
+	const int sizeBuffer = 32768;
+	char* buffer = new char[sizeBuffer];
+	::memset(buffer, 0, sizeBuffer);
+	std::ofstream outfile(gameFileName.c_str(), std::ofstream::binary);
+	while(unzReadCurrentFile(editorZip, buffer, sizeBuffer) > 0) {
+		outfile.write(buffer, sizeBuffer);
+	}
+	if (buffer) {
+		delete[] buffer;
+		buffer = NULL;
+	}
+
+	// Close game zip file
+	unzCloseCurrentFile(editorZip);
+
+	// Close launcher zip
+	unzClose(editorZip);
+
+	// Initialize file information (to prevent bugs)
+	zip_fileinfo* zipfi = new zip_fileinfo();
+	zipfi->dosDate = 0;
+	zipfi->tmz_date.tm_year = 2016;
+	zipfi->tmz_date.tm_mon = 5;
+	zipfi->tmz_date.tm_mday = 30;
+	zipfi->tmz_date.tm_hour = 10;
+	zipfi->tmz_date.tm_min = 30;
+	zipfi->tmz_date.tm_sec = 24;
+
+	// Locate game zip
+	const string gamePath = dataDirsAccess.LocateFile(gameFileName.c_str());
+
+	// Open game zip
+	zipFile gameZip = zipOpen(gamePath.c_str(), APPEND_STATUS_ADDINZIP);
+	if (gameZip == NULL) {
+		std::string msg = "Couldn't load archive \"" + gamePath + "\"";
+		luaL_error(L, msg.c_str());
+		return 0;
+	}
+
+	// Write files
+	// ModInfo
+	zipOpenNewFileInZip(gameZip, "ModInfo.lua", zipfi, NULL, 0, NULL, 0, NULL, Z_DEFLATED, Z_BEST_COMPRESSION);
+	zipWriteInFileInZip(gameZip, modinfo.c_str(), modinfo.length());
+	zipCloseFileInZip(gameZip);
+	// Scenario
+	if (scenarioFileName != ""){
+		const string scenarioPath = dataDirsAccess.LocateFile("SPRED/scenarios/" + scenarioFileName + ".xml");
+		std::ifstream scenarioFile(scenarioPath.c_str());
+		string scenarioString((std::istreambuf_iterator<char>(scenarioFile)), std::istreambuf_iterator<char>());
+		zipOpenNewFileInZip(gameZip, "scenario/scenario.xml", zipfi, NULL, 0, NULL, 0, NULL, Z_DEFLATED, Z_BEST_COMPRESSION);
+		zipWriteInFileInZip(gameZip, scenarioString.c_str(), scenarioString.length());
+		zipCloseFileInZip(gameZip);
+	}
+	// Missions and local config files
+	for (int i = 0 ; i < levelList.size() ; i++) {
+		// Add editor file
+		const string levelPath = dataDirsAccess.LocateFile("SPRED/missions/" + levelList[i] + ".editor");
+		std::ifstream levelFile(levelPath.c_str());
+		string levelString((std::istreambuf_iterator<char>(levelFile)), std::istreambuf_iterator<char>());
+		const string levelZipPath = "Missions/" + levelList[i] + ".editor";
+		zipOpenNewFileInZip(gameZip, levelZipPath.c_str(), zipfi, NULL, 0, NULL, 0, NULL, Z_DEFLATED, Z_BEST_COMPRESSION);
+		zipWriteInFileInZip(gameZip, levelString.c_str(), levelString.length());
+		zipCloseFileInZip(gameZip);
+		// Add contextual feedbacks of the mission
+		const string localFbPath = dataDirsAccess.LocateFile("traces/data/expert/" + levelList[i] + "/feedbacks.xml");
+		std::ifstream localFbFile(localFbPath.c_str());
+		string localFbString((std::istreambuf_iterator<char>(localFbFile)), std::istreambuf_iterator<char>());
+		if (localFbString.compare("") != 0){
+			const string localFbZipPath = "traces/expert/" + levelList[i] + "/feedbacks.xml";
+			zipOpenNewFileInZip(gameZip, localFbZipPath.c_str(), zipfi, NULL, 0, NULL, 0, NULL, Z_DEFLATED, Z_BEST_COMPRESSION);
+			zipWriteInFileInZip(gameZip, localFbString.c_str(), localFbString.length());
+			zipCloseFileInZip(gameZip);
+		}
+		// Add contextual compression params of the mission
+		const string localCpPath = dataDirsAccess.LocateFile("traces/data/expert/" + levelList[i] + "/params.json");
+		std::ifstream localCpFile(localCpPath.c_str());
+		string localCpString((std::istreambuf_iterator<char>(localCpFile)), std::istreambuf_iterator<char>());
+		if (localCpString.compare("") != 0){
+			const string localCpZipPath = "traces/expert/" + levelList[i] + "/params.json";
+			zipOpenNewFileInZip(gameZip, localCpZipPath.c_str(), zipfi, NULL, 0, NULL, 0, NULL, Z_DEFLATED, Z_BEST_COMPRESSION);
+			zipWriteInFileInZip(gameZip, localCpString.c_str(), localCpString.length());
+			zipCloseFileInZip(gameZip);
+		}
+	}
+	// Traces
+	for (int i = 0 ; i < tracesList.size() ; i++) {
+		vector<string> trace;
+		boost::split(trace, tracesList[i], boost::is_any_of(","));
+		// XML compressed trace
+		const string tracePath = dataDirsAccess.LocateFile("traces/data/expert/" + trace[0] + "/" + trace[1] + ".xml");
+		std::ifstream traceFile(tracePath.c_str());
+		string traceString((std::istreambuf_iterator<char>(traceFile)), std::istreambuf_iterator<char>());
+		const string traceZipPath = "traces/expert/" + trace[0] + "/" + trace[1] + ".xml";
+		zipOpenNewFileInZip(gameZip, traceZipPath.c_str(), zipfi, NULL, 0, NULL, 0, NULL, Z_DEFLATED, Z_BEST_COMPRESSION);
+		zipWriteInFileInZip(gameZip, traceString.c_str(), traceString.length());
+		zipCloseFileInZip(gameZip);
+		// Log compressed file
+		const string logPath = dataDirsAccess.LocateFile("traces/data/expert/" + trace[0] + "/" + trace[1] + ".log");
+		std::ifstream logFile(logPath.c_str());
+		string logString((std::istreambuf_iterator<char>(logFile)), std::istreambuf_iterator<char>());
+		const string logZipPath = "traces/expert/" + trace[0] + "/" + trace[1] + ".log";
+		zipOpenNewFileInZip(gameZip, logZipPath.c_str(), zipfi, NULL, 0, NULL, 0, NULL, Z_DEFLATED, Z_BEST_COMPRESSION);
+		zipWriteInFileInZip(gameZip, logString.c_str(), logString.length());
+		zipCloseFileInZip(gameZip);
+	}
+
+	// Add default feedbacks
+	const string defaultFbPath = dataDirsAccess.LocateFile("traces/data/feedbacks.xml");
+	std::ifstream defaultFbFile(defaultFbPath.c_str());
+	string defaultFbString((std::istreambuf_iterator<char>(defaultFbFile)), std::istreambuf_iterator<char>());
+	if (defaultFbString.compare("") != 0){
+		const string defaultFbZipPath = "traces/feedbacks.xml";
+		zipOpenNewFileInZip(gameZip, defaultFbZipPath.c_str(), zipfi, NULL, 0, NULL, 0, NULL, Z_DEFLATED, Z_BEST_COMPRESSION);
+		zipWriteInFileInZip(gameZip, defaultFbString.c_str(), defaultFbString.length());
+		zipCloseFileInZip(gameZip);
+	}
+	// Add default compression params
+	const string defaultCpPath = dataDirsAccess.LocateFile("traces/data/params.json");
+	std::ifstream defaultCpFile(defaultCpPath.c_str());
+	string defaultCpString((std::istreambuf_iterator<char>(defaultCpFile)), std::istreambuf_iterator<char>());
+	if (defaultCpString.compare("") != 0){
+		const string defaultCpZipPath = "traces/params.json";
+		zipOpenNewFileInZip(gameZip, defaultCpZipPath.c_str(), zipfi, NULL, 0, NULL, 0, NULL, Z_DEFLATED, Z_BEST_COMPRESSION);
+		zipWriteInFileInZip(gameZip, defaultCpString.c_str(), defaultCpString.length());
+		zipCloseFileInZip(gameZip);
+	}
+
+	// Close game zip
+	zipClose(gameZip, NULL);
+
+	return 0;
+}
+// ---
 
 /******************************************************************************/
 /******************************************************************************/

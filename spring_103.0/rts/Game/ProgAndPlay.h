@@ -19,7 +19,7 @@
 #include "System/FileSystem/VFSHandler.h"
 #include "System/FileSystem/ArchiveScanner.h"
 #include "System/Config/ConfigHandler.h"
-#include <boost/thread.hpp>
+#include <thread>
 
 class CProgAndPlay
 {
@@ -53,8 +53,8 @@ private:
 	std::string missionName;
 	std::string lang;
 	std::time_t startTime;
-	boost::thread tracesThread;
-	TracesParser tp;
+	std::thread tracesThread;
+	std::shared_ptr<TracesParser> tp;
 	TracesAnalyser ta;
 
 	int updatePP(); // update Prog&Play data if necessary
