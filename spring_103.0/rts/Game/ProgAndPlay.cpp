@@ -138,12 +138,12 @@ CProgAndPlay::CProgAndPlay() : loaded(false), updated(false), missionEnded(false
 CProgAndPlay::~CProgAndPlay() {
 	log("ProgAndPLay destructor begin");
 	if (loaded){
-	if (PP_Quit() == -1){
-		std::string tmp(PP_GetError());
-		log(tmp.c_str());
-	}
-	else
-		log("Prog&Play shut down and cleaned up");
+		if (PP_Quit() == -1){
+			std::string tmp(PP_GetError());
+			log(tmp.c_str());
+		}
+		else
+			log("Prog&Play shut down and cleaned up");
 	}
 	// be sure to stop the thread and close files
 	// Stop thread
@@ -215,6 +215,7 @@ void CProgAndPlay::Update(void) {
 			}
 			log ("CProgAndPlay : missionEnded set to true");
 			missionEnded = true;
+			configHandler->SetString("victoryState", "", true); // reset victoryState notification
 		}
 		mission_ended_frame_counter = 0; // reset mission ended counter
 	} else{
@@ -1084,6 +1085,7 @@ void CProgAndPlay::publishOnFacebook() {
 	if (photoFilename.empty() && configHandler->IsSet("score") && !configHandler->GetString("score").empty()) {
 		log("sending request to the server");
 		sendRequestToServer();
+		configHandler->SetString("score", "", true); // reset score notification
 	}
 	if (!photoFilename.empty()) {
 		log("open facebook url");
