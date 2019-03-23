@@ -12,6 +12,11 @@
 #include "System/Util.h"
 #include "System/Log/FramePrefixer.h"
 
+// Muratet (resolve bug when reload cause desync. see: https://github.com/Spring-Chobby/Chobby/issues/299) ---
+#ifdef SYNCCHECK
+	#include "System/Sync/SyncChecker.h"
+#endif
+// ---
 
 /**
  * @brief global synced
@@ -48,8 +53,10 @@ CR_REG_METADATA(CGlobalSynced, (
  */
 CGlobalSynced::CGlobalSynced()
 {
-	randSeed     = 18655;
-	initRandSeed = randSeed;
+	// Muratet (resolve bug when reload cause desync. see: https://github.com/Spring-Chobby/Chobby/issues/299) ---
+	//randSeed     = 18655;
+	//initRandSeed = randSeed;
+	// ---
 
 	assert(teamHandler == NULL);
 	ResetState();
@@ -69,6 +76,13 @@ void CGlobalSynced::ResetState() {
 	frameNum = -1; // first real frame is 0
 	tempNum  =  1;
 
+	// Muratet (resolve bug when reload cause desync. see: https://github.com/Spring-Chobby/Chobby/issues/299) ---
+#ifdef SYNCCHECK
+	// reset checksum
+	CSyncChecker::NewFrame();
+#endif
+	// ---
+	
 	speedFactor       = 1.0f;
 	wantedSpeedFactor = 1.0f;
 
@@ -79,6 +93,11 @@ void CGlobalSynced::ResetState() {
 	noHelperAIs     = false;
 	editDefsEnabled = false;
 	useLuaGaia      = true;
+	
+	// Muratet (resolve bug when reload cause desync. see: https://github.com/Spring-Chobby/Chobby/issues/299) ---
+	randSeed = 18655;
+	initRandSeed = randSeed;
+	// ---
 
 	log_framePrefixer_setFrameNumReference(&frameNum);
 
