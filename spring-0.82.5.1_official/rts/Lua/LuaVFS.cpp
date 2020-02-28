@@ -508,8 +508,8 @@ int LuaVFS::BuildPPEditor(lua_State* L) {
 	const string game = luaL_checkstring(L, 1);
 
 	// Prepare file
-	const string modinfo = "return { game='SPRED for " + game + "', shortGame='SPRED for " + game + "', name='SPRED for " + game + "', shortName='SPRED for " + game + "', mutator='official', version='1.0', description='SPRED module. SPRED for " + game + ".', url='http://www.irit.fr/ProgAndPlay/index_en.php', modtype=1, depend= { \"" + game + "\" },}";
-	const string editorName = "mods/SPRED for " + game + ".sdz";
+	const string modinfo = "return { game='SPRED for " + game + "', shortGame='SPRED for " + game + "', name='SPRED for " + game + "', shortName='SPRED for " + game + "', mutator='official', version='1.0', description='SPRED module. SPRED for " + game + ".', url='http://progandplay.lip6.fr/index.php?LANG=en', modtype=1, depend= { \"" + game + "\" },}";
+	const string editorName = filesystem.LocateFile("mods/SPRED for " + game + ".sdz");
 
 	// Locate launcher zip
 	const string launcherPath = filesystem.LocateFile("mods/SPRED_Launcher.sdz");
@@ -588,8 +588,8 @@ int LuaVFS::BuildPPGame(lua_State* L) {
 	const string modtype = luaL_checkstring(L, 9);
 
 	// Prepare file
-	const string modinfo = "return { game='" + name + "', shortGame='" + gameName + "', name='" + name + "', shortName='" + gameName + "', mutator='official', version='1.0', description='SPRED module. " + desc + "', url='http://www.irit.fr/ProgAndPlay/index_en.php', modtype=" + modtype + ", depend= { \"" + game + "\" },}";
-	const string gameFileName = "mods/" + gameName + ".sdz";
+	const string modinfo = "return { game='" + name + "', shortGame='" + gameName + "', name='" + name + "', shortName='" + gameName + "', mutator='official', version='1.0', description='SPRED module. " + desc + "', url='http://progandplay.lip6.fr/index.php?LANG=en', modtype=" + modtype + ", depend= { \"" + game + "\" },}";
+	const string gameFileName = filesystem.LocateFile("mods/" + gameName + ".sdz");
 
 	// Locate editor zip
 	const string editorPath = filesystem.LocateFile("mods/" + editorName + ".sdz");
@@ -653,9 +653,9 @@ int LuaVFS::BuildPPGame(lua_State* L) {
 	zipCloseFileInZip(gameZip);
 	// Scenario
 	if (scenarioFileName != ""){
-		const string scenarioPath = "SPRED/scenarios/" + scenarioFileName + ".xml";
-		ifstream scenarioFile(scenarioPath.c_str());
-		string scenarioString((istreambuf_iterator<char>(scenarioFile)), istreambuf_iterator<char>());
+		const string scenarioPath = filesystem.LocateFile("SPRED/scenarios/" + scenarioFileName + ".xml");
+		std::ifstream scenarioFile(scenarioPath.c_str());
+		string scenarioString((std::istreambuf_iterator<char>(scenarioFile)), std::istreambuf_iterator<char>());
 		zipOpenNewFileInZip(gameZip, "scenario/scenario.xml", zipfi, NULL, 0, NULL, 0, NULL, Z_DEFLATED, Z_BEST_COMPRESSION);
 		zipWriteInFileInZip(gameZip, scenarioString.c_str(), scenarioString.length());
 		zipCloseFileInZip(gameZip);
@@ -663,17 +663,17 @@ int LuaVFS::BuildPPGame(lua_State* L) {
 	// Missions and local config files
 	for (int i = 0 ; i < levelList.size() ; i++) {
 		// Add editor file
-		const string levelPath = "SPRED/missions/" + levelList[i] + ".editor";
-		ifstream levelFile(levelPath.c_str());
-		string levelString((istreambuf_iterator<char>(levelFile)), istreambuf_iterator<char>());
+		const string levelPath = filesystem.LocateFile("SPRED/missions/" + levelList[i] + ".editor");
+		std::ifstream levelFile(levelPath.c_str());
+		string levelString((std::istreambuf_iterator<char>(levelFile)), std::istreambuf_iterator<char>());
 		const string levelZipPath = "Missions/" + levelList[i] + ".editor";
 		zipOpenNewFileInZip(gameZip, levelZipPath.c_str(), zipfi, NULL, 0, NULL, 0, NULL, Z_DEFLATED, Z_BEST_COMPRESSION);
 		zipWriteInFileInZip(gameZip, levelString.c_str(), levelString.length());
 		zipCloseFileInZip(gameZip);
 		// Add contextual feedbacks of the mission
-		const string localFbPath = "traces/data/expert/" + levelList[i] + "/feedbacks.xml";
-		ifstream localFbFile(localFbPath.c_str());
-		string localFbString((istreambuf_iterator<char>(localFbFile)), istreambuf_iterator<char>());
+		const string localFbPath = filesystem.LocateFile("traces/data/expert/" + levelList[i] + "/feedbacks.xml");
+		std::ifstream localFbFile(localFbPath.c_str());
+		string localFbString((std::istreambuf_iterator<char>(localFbFile)), std::istreambuf_iterator<char>());
 		if (localFbString.compare("") != 0){
 			const string localFbZipPath = "traces/expert/" + levelList[i] + "/feedbacks.xml";
 			zipOpenNewFileInZip(gameZip, localFbZipPath.c_str(), zipfi, NULL, 0, NULL, 0, NULL, Z_DEFLATED, Z_BEST_COMPRESSION);
@@ -681,9 +681,9 @@ int LuaVFS::BuildPPGame(lua_State* L) {
 			zipCloseFileInZip(gameZip);
 		}
 		// Add contextual compression params of the mission
-		const string localCpPath = "traces/data/expert/" + levelList[i] + "/params.json";
-		ifstream localCpFile(localCpPath.c_str());
-		string localCpString((istreambuf_iterator<char>(localCpFile)), istreambuf_iterator<char>());
+		const string localCpPath = filesystem.LocateFile("traces/data/expert/" + levelList[i] + "/params.json");
+		std::ifstream localCpFile(localCpPath.c_str());
+		string localCpString((std::istreambuf_iterator<char>(localCpFile)), std::istreambuf_iterator<char>());
 		if (localCpString.compare("") != 0){
 			const string localCpZipPath = "traces/expert/" + levelList[i] + "/params.json";
 			zipOpenNewFileInZip(gameZip, localCpZipPath.c_str(), zipfi, NULL, 0, NULL, 0, NULL, Z_DEFLATED, Z_BEST_COMPRESSION);
@@ -696,17 +696,17 @@ int LuaVFS::BuildPPGame(lua_State* L) {
 		vector<string> trace;
 		boost::split(trace, tracesList[i], boost::is_any_of(","));
 		// XML compressed trace
-		const string tracePath = "traces/data/expert/" + trace[0] + "/" + trace[1] + ".xml";
-		ifstream traceFile(tracePath.c_str());
-		string traceString((istreambuf_iterator<char>(traceFile)), istreambuf_iterator<char>());
+		const string tracePath = filesystem.LocateFile("traces/data/expert/" + trace[0] + "/" + trace[1] + ".xml");
+		std::ifstream traceFile(tracePath.c_str());
+		string traceString((std::istreambuf_iterator<char>(traceFile)), std::istreambuf_iterator<char>());
 		const string traceZipPath = "traces/expert/" + trace[0] + "/" + trace[1] + ".xml";
 		zipOpenNewFileInZip(gameZip, traceZipPath.c_str(), zipfi, NULL, 0, NULL, 0, NULL, Z_DEFLATED, Z_BEST_COMPRESSION);
 		zipWriteInFileInZip(gameZip, traceString.c_str(), traceString.length());
 		zipCloseFileInZip(gameZip);
 		// Log compressed file
-		const string logPath = "traces/data/expert/" + trace[0] + "/" + trace[1] + ".log";
-		ifstream logFile(logPath.c_str());
-		string logString((istreambuf_iterator<char>(logFile)), istreambuf_iterator<char>());
+		const string logPath = filesystem.LocateFile("traces/data/expert/" + trace[0] + "/" + trace[1] + ".log");
+		std::ifstream logFile(logPath.c_str());
+		string logString((std::istreambuf_iterator<char>(logFile)), std::istreambuf_iterator<char>());
 		const string logZipPath = "traces/expert/" + trace[0] + "/" + trace[1] + ".log";
 		zipOpenNewFileInZip(gameZip, logZipPath.c_str(), zipfi, NULL, 0, NULL, 0, NULL, Z_DEFLATED, Z_BEST_COMPRESSION);
 		zipWriteInFileInZip(gameZip, logString.c_str(), logString.length());
@@ -714,9 +714,9 @@ int LuaVFS::BuildPPGame(lua_State* L) {
 	}
 
 	// Add default feedbacks
-	const string defaultFbPath = "traces/data/feedbacks.xml";
-	ifstream defaultFbFile(defaultFbPath.c_str());
-	string defaultFbString((istreambuf_iterator<char>(defaultFbFile)), istreambuf_iterator<char>());
+	const string defaultFbPath = filesystem.LocateFile("traces/data/feedbacks.xml");
+	std::ifstream defaultFbFile(defaultFbPath.c_str());
+	string defaultFbString((std::istreambuf_iterator<char>(defaultFbFile)), std::istreambuf_iterator<char>());
 	if (defaultFbString.compare("") != 0){
 		const string defaultFbZipPath = "traces/feedbacks.xml";
 		zipOpenNewFileInZip(gameZip, defaultFbZipPath.c_str(), zipfi, NULL, 0, NULL, 0, NULL, Z_DEFLATED, Z_BEST_COMPRESSION);
@@ -724,9 +724,9 @@ int LuaVFS::BuildPPGame(lua_State* L) {
 		zipCloseFileInZip(gameZip);
 	}
 	// Add default compression params
-	const string defaultCpPath = "traces/data/params.json";
-	ifstream defaultCpFile(defaultCpPath.c_str());
-	string defaultCpString((istreambuf_iterator<char>(defaultCpFile)), istreambuf_iterator<char>());
+	const string defaultCpPath = filesystem.LocateFile("traces/data/params.json");
+	std::ifstream defaultCpFile(defaultCpPath.c_str());
+	string defaultCpString((std::istreambuf_iterator<char>(defaultCpFile)), std::istreambuf_iterator<char>());
 	if (defaultCpString.compare("") != 0){
 		const string defaultCpZipPath = "traces/params.json";
 		zipOpenNewFileInZip(gameZip, defaultCpZipPath.c_str(), zipfi, NULL, 0, NULL, 0, NULL, Z_DEFLATED, Z_BEST_COMPRESSION);

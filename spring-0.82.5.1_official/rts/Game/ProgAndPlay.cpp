@@ -75,7 +75,7 @@ void log(std::string msg) {
 
 CProgAndPlay* pp;
 
-CProgAndPlay::CProgAndPlay() : loaded(false), updated(false), missionEnded(false), traceModuleCorrectlyInitialized(false), tp(), ta(), tracesComing(false), newExecutionDetected(false), endExecutionDetected(false), onGoingCompression(false) {
+CProgAndPlay::CProgAndPlay() : loaded(false), updated(false), missionEnded(false), traceModuleCorrectlyInitialized(false), ta(), tracesComing(false), newExecutionDetected(false), endExecutionDetected(false), onGoingCompression(false) {
 	log("ProgAndPLay constructor begin");
 
 	// initialisation of Prog&Play
@@ -87,6 +87,9 @@ CProgAndPlay::CProgAndPlay() : loaded(false), updated(false), missionEnded(false
 		log("Prog&Play initialized");
 		loaded = true;
 	}
+	
+	// Init trace parser
+	tp = std::make_shared<TracesParser> ();
 
 	// The path where the .sdz are located
 	archivePath = "mods\\" + archiveScanner->ArchiveFromName(gameSetup->modName);
@@ -116,7 +119,7 @@ CProgAndPlay::CProgAndPlay() : loaded(false), updated(false), missionEnded(false
 			TracesParser::setLang((modOpts.find("language") != modOpts.end()) ? modOpts.at("language") : "en");
 			// .log file is the input for the parser that will build compression version
 			// ppTraces is the output file stream that add content into .log file
-			tracesThread = boost::thread(&TracesParser::parseLogFile, &tp, dirName, missionName+".log", true);
+			tracesThread = boost::thread(&TracesParser::parseLogFile, tp, dirName, missionName+".log", true);
 		}
 	}
 
@@ -124,28 +127,25 @@ CProgAndPlay::CProgAndPlay() : loaded(false), updated(false), missionEnded(false
 }
 
 CProgAndPlay::~CProgAndPlay() {
-  log("ProgAndPLay destructor begin");
-  if (loaded){
-	if (PP_Quit() == -1){
-		std::string tmp(PP_GetError());
-		log(tmp.c_str());
-	}
-	else
-		log("Prog&Play shut down and cleaned up");
-  }
-  if (traceModuleCorrectlyInitialized) {
-		if (!missionEnded) {
-			// Stop thread
-			tp.setEnd();
-			tracesThread.join();
-			// Close traces file
-			ppTraces.close();
+	log("ProgAndPLay destructor begin");
+	if (loaded){
+		if (PP_Quit() == -1){
+			std::string tmp(PP_GetError());
+			log(tmp.c_str());
 		}
-		// then the trace module is no longer initialized
-		traceModuleCorrectlyInitialized = false;
-  }
-  log("ProgAndPLay destructor end");
-  logFile.close();
+		else
+			log("Prog&Play shut down and cleaned up");
+	}
+	// be sure to stop the thread and close files
+	// Stop thread
+	tp->setEnd();
+	if (tracesThread.joinable()) tracesThread.join();
+	// then the trace module is no longer initialized
+	traceModuleCorrectlyInitialized = false;
+	// Close files
+	ppTraces.close();
+	log("ProgAndPLay destructor end");
+	logFile.close();
 }
 
 void CProgAndPlay::Update(void) {
@@ -206,6 +206,7 @@ void CProgAndPlay::Update(void) {
 			}
 			log ("CProgAndPlay : missionEnded set to true");
 			missionEnded = true;
+			configHandler->SetString("victoryState", "", true); // reset victoryState notification
 		}
 		mission_ended_frame_counter = 0; // reset mission ended counter
 	} else{
@@ -235,14 +236,14 @@ void CProgAndPlay::Update(void) {
 		if (newExecutionDetected && (missionEndedReach || unitsIdledReach || askHelp) && !onGoingCompression){
 			log("CProgAndPlay : ask parser to proceed and compress traces");
 			// we ask trace parser to proceed all traces aggregated from the last new execution event
-			tp.setProceed(true);
+			tp->setProceed(true);
 			onGoingCompression = true;
 		}
 	}
 
 	// Check if it's time to launch analysis of compressed traces
 	if (onGoingCompression){
-		if (tp.compressionDone()){
+		if (tp->compressionDone()){
 			// compression is done then proceed compression result by computing feedback
 			// or storing expert solution
 			log("CProgAndPlay : compression done");
@@ -251,8 +252,8 @@ void CProgAndPlay::Update(void) {
 			// thread is steal running. Then we explicitly ask to stop now
 			if (missionEnded && traceModuleCorrectlyInitialized) {
 				log("CProgAndPlay : turn off trace parser and set traceModuleCorrectlyInitialized to false");
-				tp.setEnd();
-				tracesThread.join();
+				tp->setEnd();
+				if (tracesThread.joinable()) tracesThread.join();
 				ppTraces.close();
 				// then the trace module is no longer initialized
 				traceModuleCorrectlyInitialized = false;
@@ -363,7 +364,7 @@ void CProgAndPlay::Update(void) {
 			sendFeedback(feedback);
 		}
 		// ...if mission end exceeds the time limit we send and empty feedback to refresh UI. This occurs for example
-		// when a player end a mission by hand (without P&P program) in this case the Widget waiting feedback and we
+		// when a player ends a mission by hand (without P&P program) in this case the Widget waiting feedback and we
 		// send it an empty one
 		if (missionEndedReach){
 			log("CProgAndPlay : no on going compression but mission end => send an empty feedback");
@@ -1076,6 +1077,7 @@ void CProgAndPlay::publishOnFacebook() {
 	if (photoFilename.empty() && !configHandler->GetString("score", "", true).empty()) {
 		log("sending request to the server");
 		sendRequestToServer();
+		configHandler->SetString("score", "", true); // reset score notification
 	}
 	if (!photoFilename.empty()) {
 		log("open facebook url");

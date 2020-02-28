@@ -58,7 +58,7 @@ private:
 	std::string lang;
 	std::time_t startTime;
 	boost::thread tracesThread;
-	TracesParser tp;
+	std::shared_ptr<TracesParser> tp;
 	TracesAnalyser ta;
 
 	int updatePP(); // update Prog&Play data if necessary
